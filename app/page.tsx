@@ -462,13 +462,15 @@ export default function BronzerFullPlatform() {
       </section>
 
       <section id="boutique" className="py-24 px-6 md:px-24 bg-white relative overflow-hidden">
-        {/* TITULO BOTÓN PARA IR A LA TIENDA COMPLETA */}
-        <h2 
-            onClick={() => { setShowFullShop(true); window.scrollTo(0,0); }}
-            className={`${cinzel.className} text-4xl text-center mb-16 relative z-10 drop-shadow-sm cursor-pointer hover:text-[#D4AF37] transition-colors underline decoration-1 underline-offset-8`}
-        >
-            Bronzer Boutique (Ver Tienda)
-        </h2>
+        {/* BOTÓN TITULO BOUTIQUE (CLICK PARA VER TIENDA COMPLETA) */}
+        <div className="flex justify-center mb-16 relative z-10">
+            <button
+                onClick={() => { setShowFullShop(true); window.scrollTo(0,0); }}
+                className={`px-10 py-5 text-xl md:text-2xl uppercase tracking-[0.15em] ${cinzel.className} ${GLASS_STYLE} flex items-center gap-3`}
+            >
+                Bronzer Boutique <ArrowRight size={18} className="opacity-70"/>
+            </button>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">
           {/* MOSTRAMOS SOLO LOS PRIMEROS 3 PRODUCTOS */}
