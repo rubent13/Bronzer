@@ -6,7 +6,7 @@ import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { 
   ArrowRight, Star, Clock, MapPin, 
   ShoppingBag, X, Check, Phone, Instagram, Mail,
-  Trash2, User, Calendar as CalIcon 
+  Trash2, User, Calendar as CalIcon, ArrowLeft 
 } from 'lucide-react';
 import { Cinzel, Montserrat } from 'next/font/google';
 
@@ -30,6 +30,7 @@ const INITIAL_PRODUCTS = [
   { id: 1, name: "Bronzer Gold Oil", price: 45, img: "https://images.unsplash.com/photo-1608248597279-f99d160bfbc8?q=80&w=2670&auto=format&fit=crop" },
   { id: 2, name: "Hydra Serum", price: 68, img: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=2574&auto=format&fit=crop" },
   { id: 3, name: "Sculpting Cream", price: 55, img: "https://images.unsplash.com/photo-1629198688000-71f23e745b6e?q=80&w=2080&auto=format&fit=crop" }, 
+  { id: 4, name: "Exfoliante Corporal", price: 35, img: "https://images.unsplash.com/photo-1608248597279-f99d160bfbc8?q=80&w=2670&auto=format&fit=crop" }, 
 ];
 
 const INITIAL_SPECIALISTS = [
@@ -54,30 +55,24 @@ const getNextDays = () => {
   return days;
 };
 
-// --- NUEVO: FUNCIÓN PARA PROCESAR IMÁGENES (DRIVE + UNSPLASH) ---
+// --- FUNCIÓN PARA PROCESAR IMÁGENES (DRIVE + UNSPLASH) ---
 const processGoogleImage = (url: string) => {
     if (!url || typeof url !== 'string') return null;
     let id = null;
-    // Si es Google Drive
     if (url.includes('drive.google.com') || url.includes('docs.google.com')) {
         const matchD = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
         if (matchD && matchD[1]) id = matchD[1];
         else { const matchId = url.match(/id=([a-zA-Z0-9_-]+)/); if (matchId && matchId[1]) id = matchId[1]; }
         if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
     }
-    // Si es Unsplash u otro link normal
     return url;
 };
 
 // --- COMPONENTE SPLASH SCREEN ---
 const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
   const [animationFinished, setAnimationFinished] = useState(false);
-
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setAnimationFinished(true);
-      setTimeout(onComplete, 1000);
-    }, 3500); 
+    const timer = setTimeout(() => { setAnimationFinished(true); setTimeout(onComplete, 1000); }, 3500); 
     return () => clearTimeout(timer);
   }, [onComplete]);
 
@@ -96,7 +91,7 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
           </motion.div>
         </motion.h1>
         <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.5, duration: 0.8 }} className={`${montserrat.className} text-[#D4AF37] text-xs md:text-sm tracking-[0.4em] uppercase mt-6 font-medium`}>
-          Delux
+          Medical Aesthetic
         </motion.p>
       </motion.div>
     </motion.div>
@@ -122,7 +117,6 @@ const CartDrawer = ({ onClose, cart, removeFromCart, total }: any) => (
             return (
                 <div key={idx} className="flex gap-4 animate-in fade-in slide-in-from-right-4 bg-white/50 p-3 rounded-2xl border border-white/50 shadow-sm">
                 <div className="w-16 h-16 bg-gray-100 relative overflow-hidden shrink-0 rounded-xl border border-white">
-                    {/* USAMOS img NATIVA PARA COMPATIBILIDAD */}
                     {imgUrl ? <img src={imgUrl} alt={item.name} className="w-full h-full object-cover" /> : null}
                 </div>
                 <div className="flex-1"><h4 className="font-medium text-sm">{item.name}</h4><p className="text-xs text-[#D4AF37] mt-1">${item.price}.00</p></div>
@@ -148,7 +142,7 @@ const BookingModal = ({
   selectedDate, setSelectedDate,
   selectedTime, setSelectedTime,
   clientData, setClientData,
-  isSubmitting, saveToDatabase, specialistsList // RECIBIMOS LA LISTA DE ESPECIALISTAS
+  isSubmitting, saveToDatabase, specialistsList
 }: any) => (
   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div className="bg-white/95 backdrop-blur-xl w-full max-w-4xl h-[600px] shadow-2xl overflow-hidden flex rounded-3xl relative border border-white/50">
@@ -179,7 +173,6 @@ const BookingModal = ({
             <h2 className={`${cinzel.className} text-2xl mb-2`}>Selecciona tu Experto</h2>
             <p className="text-gray-400 text-sm mb-6">Elige al profesional para tu tratamiento.</p>
             <div className="grid grid-cols-1 gap-4">
-              {/* USAMOS LA LISTA DINAMICA O INICIAL */}
               {specialistsList.map((spec: any) => {
                 const imgUrl = processGoogleImage(spec.img);
                 return (
@@ -284,6 +277,9 @@ export default function BronzerFullPlatform() {
   const [specialists, setSpecialists] = useState<any[]>(INITIAL_SPECIALISTS);
   const [services, setServices] = useState<any[]>(INITIAL_SERVICES);
   
+  // --- NUEVO: ESTADO PARA MOSTRAR TIENDA COMPLETA ---
+  const [showFullShop, setShowFullShop] = useState(false);
+
   const [cart, setCart] = useState<any[]>([]);
   const cartTotal = cart.reduce((acc, item) => acc + item.price, 0);
   const addToCart = (product: any) => { setCart([...cart, product]); setCartOpen(true); };
@@ -298,27 +294,21 @@ export default function BronzerFullPlatform() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // --- NUEVO: CARGA DE DATOS REALES ---
+    // CARGA DE DATOS REALES (SI EXISTEN)
     const fetchData = async () => {
         try {
-            // Cargar Productos
             const resProd = await fetch('/api/database?tab=Productos');
             const dataProd = await resProd.json();
-            // Solo actualizamos si hay datos reales, si no, dejamos los de demo
             if(dataProd.success && dataProd.data.length > 0) setProducts(dataProd.data);
 
-            // Cargar Especialistas
             const resSpec = await fetch('/api/database?tab=ESPECIALISTAS');
             const dataSpec = await resSpec.json();
             if(dataSpec.success && dataSpec.data.length > 0) setSpecialists(dataSpec.data);
 
-            // Cargar Servicios
             const resServ = await fetch('/api/database?tab=Servicios');
             const dataServ = await resServ.json();
             if(dataServ.success && dataServ.data.length > 0) setServices(dataServ.data);
-        } catch (error) {
-            console.error("Error cargando datos, usando demo.", error);
-        }
+        } catch (error) { console.error("Usando datos demo..."); }
     };
     fetchData();
 
@@ -338,19 +328,56 @@ export default function BronzerFullPlatform() {
           phone: clientData.phone,
           note: clientData.note,
           service: selectedService?.name || selectedService?.title || "Servicio General",
-          date: selectedDate, 
-          time: selectedTime,
-          specialist: selectedSpecialist?.name,
+          date: selectedDate, time: selectedTime, specialist: selectedSpecialist?.name,
         }),
       });
       if (!response.ok) throw new Error("Error server");
       const data = await response.json();
-      if (data.success) setBookingStep(5); 
-      else alert("Error al agendar");
+      if (data.success) setBookingStep(5); else alert("Error al agendar");
     } catch (error) { alert("Fallo conexión"); } 
     finally { setIsSubmitting(false); }
   };
 
+  // --- SI ESTAMOS EN MODO TIENDA COMPLETA ---
+  if (showFullShop) {
+      return (
+        <div className={`bg-slate-50 min-h-screen text-[#1a1a1a] ${montserrat.className}`}>
+            <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+                <div className="container mx-auto px-6 h-20 flex justify-between items-center">
+                    <button onClick={() => setShowFullShop(false)} className="flex items-center gap-2 text-sm hover:text-[#D4AF37] transition-colors uppercase tracking-widest">
+                        <ArrowLeft size={18} /> Volver
+                    </button>
+                    <div className={`${cinzel.className} text-xl tracking-[0.15em] font-bold`}>BRONZER SHOP</div>
+                    <div className="relative cursor-pointer hover:text-[#D4AF37] transition-colors" onClick={() => setCartOpen(true)}>
+                        <ShoppingBag size={20} />
+                        {cart.length > 0 && <span className="absolute -top-2 -right-2 bg-black text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full shadow-sm">{cart.length}</span>}
+                    </div>
+                </div>
+            </header>
+            
+            <main className="container mx-auto px-6 pt-32 pb-24">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                    {products.map((prod) => {
+                        const imgUrl = processGoogleImage(prod.img);
+                        return (
+                            <div key={prod.id} className="group relative">
+                                <div className="relative h-[350px] w-full bg-[#F5F5F5] mb-4 overflow-hidden rounded-[1.5rem] border border-gray-100 shadow-sm transition-all duration-500 group-hover:shadow-xl">
+                                    {imgUrl && <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />}
+                                    <button onClick={() => addToCart(prod)} className={`absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] py-3 translate-y-24 group-hover:translate-y-0 text-xs uppercase tracking-widest ${GLASS_DARK_STYLE}`}>Añadir</button>
+                                </div>
+                                <h3 className="font-medium text-base">{prod.name}</h3>
+                                <p className="text-[#D4AF37] text-sm font-serif italic">${prod.price}</p>
+                            </div>
+                        )
+                    })}
+                </div>
+            </main>
+            {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} />}
+        </div>
+      );
+  }
+
+  // --- MODO LANDING PAGE (NORMAL) ---
   return (
     <div className={`bg-slate-50 min-h-screen text-[#1a1a1a] ${montserrat.className} selection:bg-[#D4AF37] selection:text-white ${showSplash ? 'overflow-hidden h-screen' : ''}`}>
       
@@ -380,12 +407,12 @@ export default function BronzerFullPlatform() {
         </div>
       </header>
 
-      <section className="relative min-h-screen pt-8 md:pt-24 flex flex-col md:flex-row">
+      <section className="relative min-h-screen pt-48 md:pt-64 flex flex-col md:flex-row">
         <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-24 py-20 md:py-0 relative overflow-hidden">
            <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50 to-gray-100 -z-10"></div>
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 3.8 }} className="relative z-10">
             <span className="text-[#D4AF37] text-xs tracking-[0.4em] uppercase font-bold mb-4 block">Medical Aesthetic</span>
-            <h1 className={`${cinzel.className} text-5xl md:text-7xl leading-[1.1] mb-6 text-black drop-shadow-sm`}>Centro <br/> Estético y <span className="italic text-gray-400 font-serif">Spa.</span></h1>
+            <h1 className={`${cinzel.className} text-5xl md:text-7xl leading-[1.1] mb-6 text-black drop-shadow-sm`}>Precisión <br/> Clínica, <br/> Alma de <span className="italic text-gray-400 font-serif">Spa.</span></h1>
             <p className="text-gray-600 font-light leading-relaxed max-w-md mb-10">Elevamos el estándar de la belleza. Tecnología de vanguardia en un ambiente de calma absoluta.</p>
             <button onClick={() => { setBookingStep(1); setBookingOpen(true); }} className={`flex w-fit items-center gap-4 px-8 py-4 text-xs uppercase tracking-widest ${GLASS_STYLE}`}>Reservar Cita <ArrowRight size={14} /></button>
           </motion.div>
@@ -422,7 +449,6 @@ export default function BronzerFullPlatform() {
               return (
               <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="bg-white/80 backdrop-blur-md p-4 rounded-3xl group cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(212,175,55,0.1)] transition-all duration-500 border border-white">
                 <div className="relative h-64 mb-6 overflow-hidden bg-gray-100 rounded-2xl">
-                   {/* IMG NATIVA PARA EVITAR ERROR 508 CON DRIVE */}
                    {imgUrl && <img src={imgUrl} alt={item.name || item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />}
                   <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 text-xs font-bold font-serif italic rounded-full shadow-sm border border-white/50">${item.price}</div>
                 </div>
@@ -436,9 +462,17 @@ export default function BronzerFullPlatform() {
       </section>
 
       <section id="boutique" className="py-24 px-6 md:px-24 bg-white relative overflow-hidden">
-        <h2 className={`${cinzel.className} text-4xl text-center mb-16 relative z-10 drop-shadow-sm`}>Bronzer Boutique</h2>
+        {/* TITULO BOTÓN PARA IR A LA TIENDA COMPLETA */}
+        <h2 
+            onClick={() => { setShowFullShop(true); window.scrollTo(0,0); }}
+            className={`${cinzel.className} text-4xl text-center mb-16 relative z-10 drop-shadow-sm cursor-pointer hover:text-[#D4AF37] transition-colors underline decoration-1 underline-offset-8`}
+        >
+            Bronzer Boutique (Ver Tienda)
+        </h2>
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">
-          {products.map((prod) => {
+          {/* MOSTRAMOS SOLO LOS PRIMEROS 3 PRODUCTOS */}
+          {products.slice(0, 3).map((prod) => {
             const imgUrl = processGoogleImage(prod.img);
             return (
             <div key={prod.id} className="text-center group relative">
