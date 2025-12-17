@@ -462,31 +462,35 @@ export default function BronzerFullPlatform() {
       </section>
 
       <section id="boutique" className="py-24 px-6 md:px-24 bg-white relative overflow-hidden">
-        {/* BOTÓN TITULO BOUTIQUE (CLICK PARA VER TIENDA COMPLETA) */}
-        <div className="flex justify-center mb-16 relative z-10">
-            <button
+        <div className="container mx-auto relative z-10">
+          
+          {/* HEADER: Título a la izquierda, Botón a la derecha */}
+          <div className="flex justify-between items-end mb-16">
+            <h2 className={`${cinzel.className} text-4xl drop-shadow-sm`}>Bronzer Boutique</h2>
+            <button 
                 onClick={() => { setShowFullShop(true); window.scrollTo(0,0); }}
-                className={`px-10 py-5 text-xl md:text-2xl uppercase tracking-[0.15em] ${cinzel.className} ${GLASS_STYLE} flex items-center gap-3`}
+                className={`hidden md:flex items-center gap-2 px-6 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}
             >
-                Bronzer Boutique <ArrowRight size={18} className="opacity-70"/>
+                Ver Todo <ArrowRight size={14} />
             </button>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">
-          {/* MOSTRAMOS SOLO LOS PRIMEROS 3 PRODUCTOS */}
-          {products.slice(0, 3).map((prod) => {
-            const imgUrl = processGoogleImage(prod.img);
-            return (
-            <div key={prod.id} className="text-center group relative">
-              <div className="relative h-[420px] w-full bg-[#F5F5F5] mb-6 overflow-hidden rounded-[2rem] border border-gray-100 shadow-sm transition-all duration-500 group-hover:shadow-xl">
-                {imgUrl && <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <button onClick={() => addToCart(prod)} className={`absolute bottom-6 left-1/2 -translate-x-1/2 w-[85%] py-4 translate-y-24 group-hover:translate-y-0 text-xs uppercase tracking-widest ${GLASS_DARK_STYLE}`}>Añadir al Carrito</button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            {/* MOSTRAMOS SOLO LOS PRIMEROS 3 PRODUCTOS */}
+            {products.slice(0, 3).map((prod) => {
+              const imgUrl = processGoogleImage(prod.img);
+              return (
+              <div key={prod.id} className="text-center group relative">
+                <div className="relative h-[420px] w-full bg-[#F5F5F5] mb-6 overflow-hidden rounded-[2rem] border border-gray-100 shadow-sm transition-all duration-500 group-hover:shadow-xl">
+                  {imgUrl && <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <button onClick={() => addToCart(prod)} className={`absolute bottom-6 left-1/2 -translate-x-1/2 w-[85%] py-4 translate-y-24 group-hover:translate-y-0 text-xs uppercase tracking-widest ${GLASS_DARK_STYLE}`}>Añadir al Carrito</button>
+                </div>
+                <h3 className="font-medium text-lg">{prod.name}</h3>
+                <p className="text-[#D4AF37] mt-1 font-serif italic font-semibold">${prod.price}</p>
               </div>
-              <h3 className="font-medium text-lg">{prod.name}</h3>
-              <p className="text-[#D4AF37] mt-1 font-serif italic font-semibold">${prod.price}</p>
-            </div>
-          )})}
+            )})}
+          </div>
         </div>
          <div className="absolute bottom-0 right-0 w-full h-1/2 bg-gradient-to-t from-gray-50 to-transparent -z-10"></div>
       </section>
