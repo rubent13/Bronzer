@@ -407,12 +407,12 @@ export default function BronzerFullPlatform() {
         </div>
       </header>
 
-      <section className="relative min-h-screen pt-48 md:pt-64 flex flex-col md:flex-row">
+      <section className="relative min-h-screen pt-8 md:pt-24 flex flex-col md:flex-row">
         <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-24 py-20 md:py-0 relative overflow-hidden">
            <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50 to-gray-100 -z-10"></div>
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 3.8 }} className="relative z-10">
             <span className="text-[#D4AF37] text-xs tracking-[0.4em] uppercase font-bold mb-4 block">Medical Aesthetic</span>
-            <h1 className={`${cinzel.className} text-5xl md:text-7xl leading-[1.1] mb-6 text-black drop-shadow-sm`}>Precisión <br/> Clínica, <br/> Alma de <span className="italic text-gray-400 font-serif">Spa.</span></h1>
+            <h1 className={`${cinzel.className} text-5xl md:text-7xl leading-[1.1] mb-6 text-black drop-shadow-sm`}>Centro <br/> Estético y <span className="italic text-gray-400 font-serif">Spa.</span></h1>
             <p className="text-gray-600 font-light leading-relaxed max-w-md mb-10">Elevamos el estándar de la belleza. Tecnología de vanguardia en un ambiente de calma absoluta.</p>
             <button onClick={() => { setBookingStep(1); setBookingOpen(true); }} className={`flex w-fit items-center gap-4 px-8 py-4 text-xs uppercase tracking-widest ${GLASS_STYLE}`}>Reservar Cita <ArrowRight size={14} /></button>
           </motion.div>
