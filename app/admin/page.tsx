@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Calendar, Users, ShoppingBag, Sparkles, 
   LogOut, Plus, Trash2, Edit2, Search, CheckCircle, XCircle, 
   TrendingUp, DollarSign, Clock, Save, Phone, FileText, RefreshCw, Tag,
-  Download, Loader2 // <--- ICONOS NUEVOS AGREGADOS
+  Download, Loader2, Menu, X // Iconos Menu y X para el sidebar móvil
 } from 'lucide-react';
 import { Cinzel, Montserrat } from 'next/font/google';
 
@@ -24,9 +24,14 @@ const INITIAL_SERVICES: any[] = []; // NUEVO
 export default function AdminPanel() {
   // --- ESTADOS ---
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isDataReady, setIsDataReady] = useState(false);
   const [activeTab, setActiveTab] = useState("overview"); 
   const [isLoadingGoogle, setIsLoadingGoogle] = useState(false); 
   const [isProcessing, setIsProcessing] = useState(false); 
+  
+  // Estado Sidebar Móvil
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   
   // Estados de Datos
   const [reservations, setReservations] = useState<any[]>(INITIAL_RESERVATIONS);
@@ -52,42 +57,40 @@ export default function AdminPanel() {
   const [isCreating, setIsCreating] = useState(false);
 
   // --- NUEVOS ESTADOS: PWA Y CARGA INICIAL ---
-  const [isDataReady, setIsDataReady] = useState(false); // Controla la pantalla de carga
+  // Controla la pantalla de carga (isDataReady ya está declarado más arriba)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null); // Evento de instalación PWA
   const [isAppInstalled, setIsAppInstalled] = useState(false); // Estado de instalación
   const [isMobile, setIsMobile] = useState(false); // Detector de móvil
 
-  // --- LÓGICA DE LOGIN ---
-  const handleLogin = (e: React.FormEvent) => {
+  // --- LOGIN ---
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loginData.user === "admin" && loginData.pass === "bronzer2025") {
       setIsAuthenticated(true);
-      // Nota: La carga de datos se dispara en el useEffect cuando isAuthenticated cambia a true
+      await fetchAllData();
+      setIsDataReady(true);
     } else {
       alert("Credenciales Incorrectas");
     }
   };
 
-  // --- NUEVO: DETECCIÓN PWA E INSTALACIÓN ---
+
+  // --- PWA & RESIZE ---
   useEffect(() => {
-    setIsMobile(window.innerWidth < 1024);
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    handleResize();
+    window.addEventListener('resize', handleResize);
 
-    // Chequear si ya es standalone (App instalada)
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-        setIsAppInstalled(true);
-    }
+    if (window.matchMedia('(display-mode: standalone)').matches) setIsAppInstalled(true);
 
-    // Capturar evento de instalación (Chrome/Android)
     const handleBeforeInstallPrompt = (e: any) => {
         e.preventDefault();
         setDeferredPrompt(e);
     };
-
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('resize', () => setIsMobile(window.innerWidth < 1024));
-
     return () => {
         window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -400,19 +403,12 @@ export default function AdminPanel() {
     );
   }
 
-  // --- PANTALLA DE CARGA (NUEVO) ---
-  // Si está autenticado pero los datos no están listos, mostramos esto
   if (isAuthenticated && !isDataReady) {
     return (
         <div className={`h-screen w-full bg-[#0a0a0a] flex flex-col items-center justify-center text-white ${montserrat.className}`}>
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.5 }} 
-                animate={{ opacity: 1, scale: 1 }} 
-                className="flex flex-col items-center gap-6"
-            >
-                <div className="w-16 h-16 border-4 border-[#D4AF37] border-t-transparent rounded-full animate-spin"></div>
-                <h2 className={`${cinzel.className} text-2xl tracking-widest text-[#D4AF37]`}>CARGANDO DATOS...</h2>
-                <p className="text-xs text-gray-500 uppercase tracking-widest">Sincronizando Google Cloud</p>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-6">
+                <Loader2 size={40} className="animate-spin text-[#D4AF37]" />
+                <h2 className={`${cinzel.className} text-xl tracking-widest text-[#D4AF37]`}>CARGANDO SYSTEM...</h2>
             </motion.div>
         </div>
     );
@@ -433,61 +429,73 @@ export default function AdminPanel() {
         </motion.button>
       )}
 
-      {/* SIDEBAR */}
-      <aside className="w-64 bg-white border-r border-gray-200 h-screen fixed top-0 left-0 z-10 hidden md:flex flex-col">
-        <div className="h-20 flex items-center justify-center border-b border-gray-100">
-          <span className={`${cinzel.className} text-xl tracking-widest`}>BRONZER <span className="text-[#D4AF37]">.</span></span>
+      {/* --- SIDEBAR RESPONSIVE (LEFT NAV) --- */}
+      {/* Overlay para cerrar en móvil */}
+      {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/50 z-40 md:hidden" />}
+      
+      <aside className={`
+        fixed md:static inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex flex-col shadow-2xl md:shadow-none
+      `}>
+        <div className="h-20 flex items-center justify-between px-6 border-b border-gray-100">
+          <span className={`${cinzel.className} text-xl tracking-widest`}>BRONZER<span className="text-[#D4AF37]">.</span></span>
+          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-gray-400"><X size={24}/></button>
         </div>
-        <nav className="flex-1 p-6 space-y-2">
-          {[{ id: "overview", label: "Resumen", icon: LayoutDashboard }, { id: "bookings", label: "Citas", icon: Calendar }, 
-            { id: "services", label: "Servicios", icon: Sparkles }, // NUEVO ITEM SERVICIOS
-            { id: "products", label: "Productos", icon: ShoppingBag }, { id: "team", label: "Equipo", icon: Users }]
-            .map((item) => (
-            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-all rounded-md ${activeTab === item.id ? 'bg-black text-white shadow-lg' : 'text-gray-500 hover:bg-gray-50'}`}>
-              <item.icon size={18} /> {item.label}
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <p className="text-[10px] uppercase text-gray-400 font-bold px-4 mb-2 mt-4">Principal</p>
+            {[
+                { id: "overview", label: "Dashboard", icon: LayoutDashboard },
+                { id: "bookings", label: "Reservas", icon: Calendar },
+            ].map(item => (
+                <button key={item.id} onClick={() => {setActiveTab(item.id); setIsSidebarOpen(false)}} 
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all ${activeTab === item.id ? 'bg-black text-white shadow-lg' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    <item.icon size={18} /> {item.label}
+                </button>
+            ))}
+
+            <p className="text-[10px] uppercase text-gray-400 font-bold px-4 mb-2 mt-6">Gestión</p>
+            {[
+                { id: "services", label: "Servicios", icon: Sparkles },
+                { id: "products", label: "Inventario", icon: ShoppingBag },
+                { id: "team", label: "Equipo", icon: Users },
+            ].map(item => (
+                <button key={item.id} onClick={() => {setActiveTab(item.id); setIsSidebarOpen(false)}} 
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all ${activeTab === item.id ? 'bg-black text-white shadow-lg' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    <item.icon size={18} /> {item.label}
+                </button>
+            ))}
+        </div>
+
+        <div className="p-4 border-t border-gray-100">
+            <button onClick={() => setIsAuthenticated(false)} className="w-full flex items-center justify-center gap-2 text-red-500 bg-red-50 py-3 rounded-xl text-xs font-bold uppercase hover:bg-red-100 transition-colors">
+                <LogOut size={16} /> Cerrar Sesión
             </button>
-          ))}
-        </nav>
-        <div className="p-6 border-t border-gray-100">
-          <button onClick={() => setIsAuthenticated(false)} className="flex items-center gap-2 text-red-500 text-xs uppercase tracking-widest hover:text-red-700"><LogOut size={16} /> Cerrar Sesión</button>
         </div>
       </aside>
 
       {/* MAIN */}
       <main className="ml-0 md:ml-64 flex-1 p-8 md:p-12 pb-24 transition-all duration-300">
         
-        {/* ENCABEZADO MÓVIL (VISIBLE SOLO EN MÓVIL) */}
-        <div className="md:hidden flex justify-between items-center mb-6">
-             <span className={`${cinzel.className} text-lg font-bold`}>BRONZER ADMIN</span>
-             <button onClick={() => setIsAuthenticated(false)}><LogOut size={20} className="text-red-500"/></button>
-        </div>
-
-        {/* MENU DE PESTAÑAS MÓVIL (VISIBLE SOLO EN MÓVIL) */}
-        <div className="md:hidden flex gap-2 overflow-x-auto pb-4 mb-6 no-scrollbar">
-             {[{ id: "overview", label: "Resumen" }, { id: "bookings", label: "Citas" }, { id: "services", label: "Servicios" }, { id: "products", label: "Productos" }, { id: "team", label: "Equipo" }].map(t => (
-               <button key={t.id} onClick={() => setActiveTab(t.id)} className={`px-4 py-2 rounded-full text-xs whitespace-nowrap border ${activeTab === t.id ? 'bg-black text-white border-black' : 'bg-white text-gray-500 border-gray-200'}`}>
-                 {t.label}
-               </button>
-             ))}
-        </div>
-
-        <header className="hidden md:flex justify-between items-center mb-12">
-          <div>
-            <h2 className={`${cinzel.className} text-3xl`}>
-              {activeTab === 'overview' && 'Dashboard Overview'}
-              {activeTab === 'bookings' && 'Gestión de Reservas'}
-              {activeTab === 'services' && 'Menú de Servicios'} 
-              {activeTab === 'products' && 'Inventario'}
-              {activeTab === 'team' && 'Especialistas'}
-            </h2>
-            <p className="text-gray-400 text-sm mt-1">Conectado a Google Cloud (Calendar & Sheets).</p>
-          </div>
-          <div className="flex items-center gap-4">
-             <button onClick={fetchAllData} className="flex items-center gap-2 text-xs border border-gray-300 px-3 py-2 rounded-full hover:bg-black hover:text-white transition-all">
-                <RefreshCw size={12} className={isLoadingGoogle ? "animate-spin" : ""} /> Sync
-             </button>
-             <div className="bg-white px-4 py-2 rounded-full border border-gray-200 flex items-center gap-2 text-sm text-gray-500"><Calendar size={14} /> {new Date().toLocaleDateString()}</div>
-          </div>
+        <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-6 md:px-10 shrink-0">
+            <div className="flex items-center gap-4">
+                <button onClick={() => setIsSidebarOpen(true)} className="md:hidden text-gray-500 hover:text-black"><Menu size={24}/></button>
+                <h2 className={`${cinzel.className} text-lg md:text-2xl truncate`}>
+                    {activeTab === 'overview' && 'Visión General'}
+                    {activeTab === 'bookings' && 'Citas Agendadas'}
+                    {activeTab === 'services' && 'Catálogo de Servicios'}
+                    {activeTab === 'products' && 'Inventario'}
+                    {activeTab === 'team' && 'Equipo Profesional'}
+                </h2>
+            </div>
+            <div className="flex items-center gap-3">
+                <button onClick={fetchAllData} className={`p-2 rounded-full border border-gray-200 text-gray-500 hover:bg-black hover:text-white transition-all ${isLoadingGoogle ? 'animate-spin' : ''}`}>
+                    <RefreshCw size={18} />
+                </button>
+                <div className="hidden md:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full text-xs font-medium text-gray-600">
+                    <span className="w-2 h-2 bg-green-500 rounded-full"></span> Online
+                </div>
+            </div>
         </header>
 
         {/* --- VISTA: OVERVIEW --- */}
