@@ -134,7 +134,7 @@ const CartDrawer = ({ onClose, cart, removeFromCart, total }: any) => (
   </>
 );
 
-// --- COMPONENTE MODAL RESERVA (RESPONSIVE) ---
+// --- COMPONENTE MODAL RESERVA (RESPONSIVE & FILTRADO) ---
 const BookingModal = ({ 
   onClose, step, setStep, 
   selectedSpecialist, setSelectedSpecialist, 
@@ -143,12 +143,31 @@ const BookingModal = ({
   selectedTime, setSelectedTime,
   clientData, setClientData,
   isSubmitting, saveToDatabase, specialistsList
-}: any) => (
+}: any) => {
+
+  // --- LÓGICA DE FILTRADO CORREGIDA Y ROBUSTA ---
+  const filteredSpecialists = selectedService
+    ? specialistsList.filter((spec: any) => {
+        // 1. Si el servicio no tiene especialistas asignados en el Admin, mostramos TODOS (por seguridad)
+        if (!selectedService.specialists || String(selectedService.specialists).trim() === "") {
+             return true;
+        }
+        
+        // 2. Normalizamos texto (minúsculas) para comparar correctamente
+        const serviceSpecs = String(selectedService.specialists).toLowerCase();
+        const specName = String(spec.name).toLowerCase();
+
+        // 3. Verificamos si el nombre del especialista está dentro de la lista del servicio
+        return serviceSpecs.includes(specName);
+      })
+    : specialistsList; // Si no hay servicio (Botón Agendar General), salen todos.
+
+  return (
   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div className="bg-white/95 backdrop-blur-xl w-full max-w-4xl max-h-[90vh] md:h-[600px] shadow-2xl overflow-hidden flex flex-col md:flex-row rounded-3xl relative border border-white/50">
       <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-black z-20"><X size={24} /></button>
       
-      {/* SIDEBAR PASOS (Oculto en móvil para ganar espacio) */}
+      {/* SIDEBAR PASOS (Oculto en móvil) */}
       <div className="w-full md:w-1/3 bg-gray-50/50 p-6 md:p-8 flex-col justify-between border-b md:border-b-0 md:border-r border-gray-100 hidden md:flex">
         <div>
           <h3 className={`${cinzel.className} text-xl md:text-2xl mb-6`}>Tu Cita</h3>
@@ -174,17 +193,30 @@ const BookingModal = ({
             <h2 className={`${cinzel.className} text-xl md:text-2xl mb-2`}>Selecciona tu Experto</h2>
             <p className="text-gray-400 text-sm mb-6">Elige al profesional para tu tratamiento.</p>
             <div className="grid grid-cols-1 gap-3 md:gap-4">
-              {specialistsList.map((spec: any) => {
-                const imgUrl = processGoogleImage(spec.img);
-                return (
-                <div key={spec.id} onClick={() => { setSelectedSpecialist(spec); setStep(2); }} className="flex items-center gap-4 p-3 border border-gray-100 rounded-2xl hover:border-[#D4AF37]/50 hover:bg-white hover:shadow-md cursor-pointer transition-all group bg-white/50">
-                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden relative grayscale group-hover:grayscale-0 transition-all border-2 border-white shadow-sm shrink-0">
-                    {imgUrl ? <img src={imgUrl} alt={spec.name} className="w-full h-full object-cover" /> : null}
+              
+              {/* LISTA FILTRADA DE ESPECIALISTAS */}
+              {filteredSpecialists.length > 0 ? (
+                  filteredSpecialists.map((spec: any) => {
+                    const imgUrl = processGoogleImage(spec.img);
+                    return (
+                    <div key={spec.id} onClick={() => { setSelectedSpecialist(spec); setStep(2); }} className="flex items-center gap-4 p-3 border border-gray-100 rounded-2xl hover:border-[#D4AF37]/50 hover:bg-white hover:shadow-md cursor-pointer transition-all group bg-white/50">
+                      <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden relative grayscale group-hover:grayscale-0 transition-all border-2 border-white shadow-sm shrink-0">
+                        {imgUrl ? <img src={imgUrl} alt={spec.name} className="w-full h-full object-cover" /> : null}
+                      </div>
+                      <div>
+                          <h4 className="font-medium text-sm md:text-base">{spec.name}</h4>
+                          <p className="text-[10px] md:text-xs text-[#D4AF37] uppercase">{spec.role}</p>
+                          {spec.schedule && <p className="text-[10px] text-gray-400 mt-0.5">{spec.schedule}</p>}
+                      </div>
+                      <ArrowRight className="ml-auto text-gray-300 group-hover:text-[#D4AF37]" size={18} />
+                    </div>
+                  )})
+              ) : (
+                  <div className="text-center py-10 text-gray-400 text-sm border border-dashed border-gray-200 rounded-2xl">
+                      No hay especialistas disponibles para este tratamiento.
                   </div>
-                  <div><h4 className="font-medium text-sm md:text-base">{spec.name}</h4><p className="text-[10px] md:text-xs text-[#D4AF37] uppercase">{spec.role}</p></div>
-                  <ArrowRight className="ml-auto text-gray-300 group-hover:text-[#D4AF37]" size={18} />
-                </div>
-              )})}
+              )}
+              
             </div>
           </motion.div>
         )}
@@ -265,7 +297,8 @@ const BookingModal = ({
       </div>
     </div>
   </motion.div>
-);
+  );
+};
 
 export default function BronzerFullPlatform() {
   const [showSplash, setShowSplash] = useState(true);
@@ -357,11 +390,11 @@ export default function BronzerFullPlatform() {
             </header>
             
             <main className="container mx-auto px-6 pt-24 md:pt-32 pb-24">
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-12 md:gap-8">
                     {products.map((prod) => {
                         const imgUrl = processGoogleImage(prod.img);
                         return (
-                            <div key={prod.id} className="group relative mb-8 md:mb-0">
+                            <div key={prod.id} className="group relative">
                                 <div className="relative h-[300px] md:h-[350px] w-full bg-[#F5F5F5] mb-4 overflow-hidden rounded-[1.5rem] border border-gray-100 shadow-sm transition-all duration-500 group-hover:shadow-xl">
                                     {imgUrl && <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />}
                                     
@@ -414,19 +447,31 @@ export default function BronzerFullPlatform() {
               <ShoppingBag size={20} />
               {cart.length > 0 && <span className="absolute -top-2 -right-2 bg-black text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full shadow-sm">{cart.length}</span>}
             </div>
-            <button onClick={() => { setBookingStep(1); setBookingOpen(true); }} className={`hidden md:block px-8 py-3 text-xs tracking-[0.2em] uppercase ${GLASS_DARK_STYLE}`}>Agendar</button>
+            {/* AQUÍ ES EL CAMBIO: Limpiamos el servicio seleccionado (setSelectedService(null)) para que salgan todos los especialistas */}
+            <button 
+                onClick={() => { setSelectedService(null); setBookingStep(1); setBookingOpen(true); }} 
+                className={`hidden md:block px-8 py-3 text-xs tracking-[0.2em] uppercase ${GLASS_DARK_STYLE}`}
+            >
+                Agendar
+            </button>
           </div>
         </div>
       </header>
 
-      <section className="relative min-h-screen pt-32 md:pt-48 flex flex-col md:flex-row">
+      <section className="relative min-h-screen pt-8 md:pt-21 flex flex-col md:flex-row">
         <div className="w-full md:w-1/2 flex flex-col justify-center px-6 md:px-24 py-12 md:py-0 relative overflow-hidden order-2 md:order-1">
            <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50 to-gray-100 -z-10"></div>
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 3.8 }} className="relative z-10">
             <span className="text-[#D4AF37] text-xs tracking-[0.4em] uppercase font-bold mb-4 block">Medical Aesthetic</span>
-            <h1 className={`${cinzel.className} text-4xl md:text-5xl lg:text-7xl leading-[1.1] mb-6 text-black drop-shadow-sm`}>Precisión <br/> Clínica, <br/> Alma de <span className="italic text-gray-400 font-serif">Spa.</span></h1>
+            <h1 className={`${cinzel.className} text-4xl md:text-5xl lg:text-7xl leading-[1.1] mb-6 text-black drop-shadow-sm`}>Centro <br/> Estético y <span className="italic text-gray-400 font-serif">Spa.</span></h1>
             <p className="text-gray-600 font-light leading-relaxed max-w-md mb-8 md:mb-10 text-sm md:text-base">Elevamos el estándar de la belleza. Tecnología de vanguardia en un ambiente de calma absoluta.</p>
-            <button onClick={() => { setBookingStep(1); setBookingOpen(true); }} className={`flex w-fit items-center gap-4 px-6 md:px-8 py-3 md:py-4 text-xs uppercase tracking-widest ${GLASS_STYLE}`}>Reservar Cita <ArrowRight size={14} /></button>
+            {/* AQUÍ TAMBIÉN: Limpiamos el servicio seleccionado para el botón del Hero */}
+            <button 
+                onClick={() => { setSelectedService(null); setBookingStep(1); setBookingOpen(true); }} 
+                className={`flex w-fit items-center gap-4 px-6 md:px-8 py-3 md:py-4 text-xs uppercase tracking-widest ${GLASS_STYLE}`}
+            >
+                Reservar Cita <ArrowRight size={14} />
+            </button>
           </motion.div>
         </div>
         <div className="w-full md:w-1/2 h-[40vh] md:h-auto relative order-1 md:order-2">
@@ -494,7 +539,7 @@ export default function BronzerFullPlatform() {
             </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-12 relative z-10">
           {/* MOSTRAMOS SOLO LOS PRIMEROS 3 PRODUCTOS */}
           {products.slice(0, 3).map((prod) => {
             const imgUrl = processGoogleImage(prod.img);
