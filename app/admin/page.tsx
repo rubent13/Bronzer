@@ -59,6 +59,9 @@ export default function AdminPanel() {
   
   // Estado Ventas
   const [salesStats, setSalesStats] = useState({ total: 0, orders: 0 });
+  
+  // AGREGAR ESTO: Estado para las ventas mensuales (array de 12 posiciones iniciadas en 0)
+  const [monthlySales, setMonthlySales] = useState<number[]>(new Array(12).fill(0));
 
   // Estados de Formularios
   const [loginData, setLoginData] = useState({ user: "", pass: "" });
@@ -208,8 +211,21 @@ export default function AdminPanel() {
       const dataSales = await resSales.json();
       if (dataSales.success) {
         const salesData = dataSales.data;
+        // Calcular totales generales
         const totalAmount = salesData.reduce((acc: number, curr: any) => acc + (Number(curr.total) || 0), 0);
         setSalesStats({ total: totalAmount, orders: salesData.length });
+
+        // AGREGAR ESTO: Lógica para agrupar ventas por mes
+        const salesByMonth = new Array(12).fill(0);
+        salesData.forEach((sale: any) => {
+            // Asegúrate que en tu Google Sheet la columna de fecha se llame 'date' o 'fecha'
+            const saleDate = new Date(sale.date || sale.fecha || new Date()); 
+            if (!isNaN(saleDate.getTime())) {
+                const monthIndex = saleDate.getMonth(); // 0 = Enero, 11 = Diciembre
+                salesByMonth[monthIndex] += Number(sale.total) || 0;
+            }
+        });
+        setMonthlySales(salesByMonth);
       }
 
     } catch (error) {
@@ -572,23 +588,59 @@ export default function AdminPanel() {
                          </div>
                     </div>
 
-                    {/* Gráfica */}
-                    <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
-                        <div className="flex justify-between items-center mb-8">
-                            <h3 className={`${cinzel.className} text-lg md:text-xl flex items-center gap-2`}><BarChart3 size={20} className="text-[#D4AF37]"/> Rendimiento</h3>
-                            <span className="text-xs bg-gray-50 px-3 py-1 rounded-full text-gray-500">2025</span>
+                    {/* Gráfica Moderna y Animada */}
+                    <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden">
+                        {/* Decoración de fondo */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-[#D4AF37]/5 to-transparent rounded-bl-full pointer-events-none"></div>
+
+                        <div className="flex justify-between items-center mb-8 relative z-10">
+                            <div>
+                                <h3 className={`${cinzel.className} text-lg md:text-xl flex items-center gap-2 text-[#0a0a0a]`}>
+                                    <BarChart3 size={20} className="text-[#D4AF37]" /> Rendimiento Financiero
+                                </h3>
+                                <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider">Flujo de caja mensual</p>
+                            </div>
+                            <select className="text-xs bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg text-gray-600 outline-none focus:border-[#D4AF37]">
+                                <option>2025</option>
+                            </select>
                         </div>
-                        <div className="h-40 md:h-64 flex items-end justify-between gap-2 md:gap-4 px-2">
-                             {[35, 50, 45, 70, 85, 65, 90, 100, 80, 60, 75, 95].map((h, i) => (
-                                 <div key={i} className="w-full flex flex-col justify-end group cursor-pointer">
-                                     <div className="w-full bg-gradient-to-t from-gray-100 to-gray-200 group-hover:from-[#D4AF37] group-hover:to-yellow-300 rounded-t-lg transition-all duration-300 relative" style={{ height: `${h}%` }}>
-                                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">${h}k</div>
+
+                        {/* Contenedor de las Barras */}
+                        <div className="h-56 md:h-64 flex items-end justify-between gap-2 md:gap-4 px-2 relative z-10">
+                             {monthlySales.map((amount, i) => {
+                                 // Calcular altura relativa (el mes con más ventas será el 100% de altura)
+                                 const maxSales = Math.max(...monthlySales, 100); // Mínimo 100 para evitar división por 0
+                                 const heightPercentage = Math.round((amount / maxSales) * 100);
+                                 
+                                 return (
+                                     <div key={i} className="w-full flex flex-col justify-end group cursor-pointer h-full">
+                                         {/* Tooltip flotante con el monto exacto al pasar el mouse */}
+                                         <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2 left-1/2 -translate-x-1/2 bg-[#0a0a0a] text-[#D4AF37] text-[10px] font-bold py-1 px-2 rounded-md shadow-lg pointer-events-none z-20 whitespace-nowrap mb-2 transform -translate-y-full">
+                                            ${amount.toLocaleString()}
+                                         </div>
+                                         
+                                         {/* Barra Animada */}
+                                         <div className="w-full bg-gray-100 rounded-t-lg relative overflow-hidden h-full flex items-end">
+                                             <motion.div 
+                                                initial={{ height: 0 }} 
+                                                animate={{ height: `${heightPercentage}%` }} 
+                                                transition={{ duration: 1, ease: "easeOut", delay: i * 0.05 }}
+                                                className="w-full bg-gradient-to-t from-[#D4AF37] to-[#F2D06B] opacity-80 group-hover:opacity-100 transition-opacity relative"
+                                             >
+                                                {/* Brillo superior en la barra */}
+                                                <div className="absolute top-0 left-0 w-full h-[2px] bg-white/50"></div>
+                                             </motion.div>
+                                         </div>
                                      </div>
-                                 </div>
-                             ))}
+                                 );
+                             })}
                         </div>
-                        <div className="flex justify-between mt-4 text-[8px] md:text-[10px] text-gray-400 font-bold uppercase border-t border-gray-100 pt-4">
-                             {['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map(m => <span key={m}>{m}</span>)}
+
+                        {/* Etiquetas de los meses */}
+                        <div className="flex justify-between mt-4 text-[8px] md:text-[10px] text-gray-400 font-bold uppercase border-t border-gray-100 pt-4 relative z-10">
+                             {['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((m, i) => (
+                                <span key={i} className="text-center w-full">{m}</span>
+                             ))}
                         </div>
                     </div>
                 </div>
