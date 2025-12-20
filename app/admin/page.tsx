@@ -7,13 +7,13 @@ import {
   LayoutDashboard, Calendar, Users, ShoppingBag, Sparkles, 
   LogOut, Plus, Trash2, Edit2, Search, CheckCircle, XCircle, 
   TrendingUp, DollarSign, Clock, Save, Phone, FileText, RefreshCw, Tag,
-  Download, Loader2, Menu, X // Iconos Menu y X para el sidebar móvil
+  Download, Loader2, Menu, X, Bell, ChevronRight, BarChart3 // Iconos Menu, X, Bell, ChevronRight, BarChart3
 } from 'lucide-react';
 import { Cinzel, Montserrat } from 'next/font/google';
 
 // --- FUENTES ---
-const cinzel = Cinzel({ subsets: ['latin'], weight: ['400', '600'] });
-const montserrat = Montserrat({ subsets: ['latin'], weight: ['300', '400', '500'] });
+const cinzel = Cinzel({ subsets: ['latin'], weight: ['400', '600', '700'] });
+const montserrat = Montserrat({ subsets: ['latin'], weight: ['300', '400', '500', '600'] });
 
 // --- DATOS INICIALES (VACÍOS) ---
 const INITIAL_RESERVATIONS: any[] = [];
@@ -61,6 +61,9 @@ export default function AdminPanel() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null); // Evento de instalación PWA
   const [isAppInstalled, setIsAppInstalled] = useState(false); // Estado de instalación
   const [isMobile, setIsMobile] = useState(false); // Detector de móvil
+
+  // Fecha Actual
+  const currentDate = new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' });
 
   // --- LOGIN ---
   const handleLogin = async (e: React.FormEvent) => {
