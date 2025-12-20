@@ -61,6 +61,7 @@ export default function AdminPanel() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null); // Evento de instalación PWA
   const [isAppInstalled, setIsAppInstalled] = useState(false); // Estado de instalación
   const [isMobile, setIsMobile] = useState(false); // Detector de móvil
+  const [userName, setUserName] = useState('Admin'); // Nombre a mostrar en header
 
   // Fecha Actual
   const currentDate = new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -70,6 +71,7 @@ export default function AdminPanel() {
     e.preventDefault();
     if (loginData.user === "admin" && loginData.pass === "bronzer2025") {
       setIsAuthenticated(true);
+      setUserName(loginData.user ? (loginData.user.charAt(0).toUpperCase() + loginData.user.slice(1)) : 'Admin');
       await fetchAllData();
       setIsDataReady(true);
     } else {
@@ -420,17 +422,7 @@ export default function AdminPanel() {
   return (
     <div className={`min-h-screen bg-[#F8F9FA] flex ${montserrat.className}`}>
       
-      {/* --- BOTÓN FLOTANTE PARA INSTALAR APP (SOLO MÓVIL Y NO INSTALADA) --- */}
-      {!isAppInstalled && (deferredPrompt || isMobile) && (
-        <motion.button 
-          initial={{ y: 100 }} animate={{ y: 0 }} transition={{ delay: 1 }}
-          onClick={handleInstallClick}
-          className="fixed bottom-6 right-6 z-[60] bg-[#D4AF37] text-black px-6 py-4 rounded-full shadow-[0_10px_30px_rgba(212,175,55,0.4)] flex items-center gap-3 text-xs font-bold uppercase tracking-widest border-2 border-white hover:scale-105 active:scale-95 transition-all"
-        >
-          <Download size={20}/>
-          Instalar App
-        </motion.button>
-      )}
+      {/* PWA install button removed per user preference */}
 
       {/* --- SIDEBAR RESPONSIVE (LEFT NAV) --- */}
       {/* Overlay para cerrar en móvil */}
@@ -498,6 +490,13 @@ export default function AdminPanel() {
                 <div className="hidden md:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full text-xs font-medium text-gray-600">
                     <span className="w-2 h-2 bg-green-500 rounded-full"></span> Online
                 </div>
+                <div className="flex items-center gap-3 ml-2">
+                    <div className="w-10 h-10 rounded-full bg-[#0a0a0a] text-[#D4AF37] flex items-center justify-center font-serif font-bold border-2 border-gray-100 shadow-sm">{userName?.charAt(0)?.toUpperCase()}</div>
+                    <div className="flex flex-col text-sm leading-none">
+                        <span className="font-medium text-gray-800">{userName}</span>
+                        <span className="text-[10px] text-gray-400">{currentDate}</span>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -520,6 +519,25 @@ export default function AdminPanel() {
                 <h3 className="text-gray-400 text-xs uppercase tracking-widest">Ventas Registradas</h3>
                 <p className={`${cinzel.className} text-3xl mt-2`}>{salesStats.orders}</p>
               </div>
+            </div>
+
+            <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className={`${cinzel.className} text-lg md:text-xl flex items-center gap-2`}><BarChart3 size={20} className="text-[#D4AF37]"/> Rendimiento Anual</h3>
+                    <span className="text-xs bg-gray-50 px-3 py-1 rounded-full text-gray-500">2025</span>
+                </div>
+                <div className="h-40 md:h-64 flex items-end justify-between gap-2 md:gap-4 px-2">
+                    {[35,50,45,70,85,65,90,100,80,60,75,95].map((h,i)=>(
+                        <div key={i} className="w-full flex flex-col justify-end group cursor-pointer">
+                            <div className="w-full bg-gradient-to-t from-gray-100 to-gray-200 group-hover:from-[#D4AF37] group-hover:to-yellow-300 rounded-t-lg transition-all duration-300 relative" style={{ height: `${h}%` }}>
+                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">${h}k</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="flex justify-between mt-4 text-[9px] md:text-[10px] text-gray-400 font-bold uppercase border-t border-gray-100 pt-4">
+                    {['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map(m => <span key={m}>{m}</span>)}
+                </div>
             </div>
           </div>
         )}
@@ -606,13 +624,13 @@ export default function AdminPanel() {
                   <Plus size={16} /> Excel
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 max-h-[50vh] md:max-h-none overflow-y-auto">
               {products.map((prod, i) => {
                 const imgUrl = processGoogleImage(prod.img);
                 return (
-                  <div key={i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm group relative">
+                  <div key={i} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm group relative hover:shadow-lg hover:-translate-y-1 transition-transform">
                     <button onClick={() => openEditProductModal(prod)} className="absolute top-4 right-4 bg-white p-2 rounded-full shadow-md text-gray-400 hover:text-black z-10"><Edit2 size={14} /></button>
-                    <div className="relative h-48 bg-gray-100 rounded-lg overflow-hidden mb-4">
+                    <div className="relative h-36 md:h-48 bg-gray-100 rounded-lg overflow-hidden mb-4">
                       {prod.promotion && <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm z-10 flex items-center gap-1"><Tag size={10} /> {prod.promotion}</div>}
                       {imgUrl ? <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <div className="flex items-center justify-center h-full text-gray-300 text-xs">Sin Imagen</div>}
                     </div>
