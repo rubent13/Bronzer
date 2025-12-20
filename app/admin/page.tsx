@@ -63,6 +63,9 @@ export default function AdminPanel() {
   // AGREGAR ESTO: Estado para las ventas mensuales (array de 12 posiciones iniciadas en 0)
   const [monthlySales, setMonthlySales] = useState<number[]>(new Array(12).fill(0));
 
+  // AGREGAR ESTA LÍNEA: Controla qué barra se está tocando en el móvil
+  const [activeChartIndex, setActiveChartIndex] = useState<number | null>(null);
+
   // Estados de Formularios
   const [loginData, setLoginData] = useState({ user: "", pass: "" });
   
@@ -346,7 +349,8 @@ export default function AdminPanel() {
       setIsCreating(true);
       setServiceModal({ 
           id: `S-${Date.now().toString().slice(-6)}`, 
-          name: '', price: 0, duration: '60 min', category: 'General', description: '', img: '' 
+          name: '', price: 0, duration: '60 min', category: 'General', description: '', img: '',
+          specialists: '' // Campo para guardar especialistas asignados (separados por comas)
       });
   };
 
@@ -359,10 +363,11 @@ export default function AdminPanel() {
       if (!serviceModal) return;
       setIsProcessing(true);
 
-      // Array ordenado para Excel: [ID, Nombre, Precio, Duracion, Categoria, Descripcion, Imagen]
+      // Array ordenado para Excel: [ID, Nombre, Precio, Duracion, Categoria, Descripcion, Imagen, ESPECIALISTAS]
       const rowData = [
           serviceModal.id, serviceModal.name, serviceModal.price, serviceModal.duration,
-          serviceModal.category, serviceModal.description || '', serviceModal.img || ''
+          serviceModal.category, serviceModal.description || '', serviceModal.img || '',
+          serviceModal.specialists || '' // Columna para especialistas asignados
       ];
 
       try {
@@ -396,7 +401,7 @@ export default function AdminPanel() {
     
     const rowData = [
         editSpecialist.id, editSpecialist.name, editSpecialist.role, editSpecialist.img,
-        editSpecialist.schedule, editSpecialist.specialty || '', editSpecialist.experience || '', editSpecialist.certified || ''
+        editSpecialist.schedule, editSpecialist.specialty || '', editSpecialist.experience || '', editSpecialist.certified || '', editSpecialist.services || ''
     ];
 
     try {
@@ -588,7 +593,7 @@ export default function AdminPanel() {
                          </div>
                     </div>
 
-                    {/* Gráfica Moderna y Animada */}
+                    {/* Gráfica Moderna (Compatible con Táctil) */}
                     <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden">
                         {/* Decoración de fondo */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-[#D4AF37]/5 to-transparent rounded-bl-full pointer-events-none"></div>
@@ -600,22 +605,31 @@ export default function AdminPanel() {
                                 </h3>
                                 <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider">Flujo de caja mensual</p>
                             </div>
-                            <select className="text-xs bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg text-gray-600 outline-none focus:border-[#D4AF37]">
-                                <option>2025</option>
-                            </select>
+                            <span className="text-xs bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg text-gray-600">2025</span>
                         </div>
 
                         {/* Contenedor de las Barras */}
                         <div className="h-56 md:h-64 flex items-end justify-between gap-2 md:gap-4 px-2 relative z-10">
                              {monthlySales.map((amount, i) => {
-                                 // Calcular altura relativa (el mes con más ventas será el 100% de altura)
-                                 const maxSales = Math.max(...monthlySales, 100); // Mínimo 100 para evitar división por 0
+                                 const maxSales = Math.max(...monthlySales, 100);
                                  const heightPercentage = Math.round((amount / maxSales) * 100);
+                                 const isActive = activeChartIndex === i; // ¿Esta barra está activa?
                                  
                                  return (
-                                     <div key={i} className="w-full flex flex-col justify-end group cursor-pointer h-full">
-                                         {/* Tooltip flotante con el monto exacto al pasar el mouse */}
-                                         <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2 left-1/2 -translate-x-1/2 bg-[#0a0a0a] text-[#D4AF37] text-[10px] font-bold py-1 px-2 rounded-md shadow-lg pointer-events-none z-20 whitespace-nowrap mb-2 transform -translate-y-full">
+                                     <div 
+                                        key={i} 
+                                        className="w-full flex flex-col justify-end group cursor-pointer h-full relative"
+                                        onClick={() => setActiveChartIndex(isActive ? null : i)} // Tocar para ver/ocultar en móvil
+                                        onMouseEnter={() => setActiveChartIndex(i)} // Hover en PC
+                                        onMouseLeave={() => setActiveChartIndex(null)} // Salir en PC
+                                     >
+                                         {/* Tooltip: Aparece si está activo (click/hover) */}
+                                         <div className={`
+                                            transition-all duration-200 absolute -top-2 left-1/2 -translate-x-1/2 
+                                            bg-[#0a0a0a] text-[#D4AF37] text-[10px] font-bold py-1 px-2 rounded-md shadow-xl z-20 whitespace-nowrap mb-2 
+                                            transform -translate-y-full pointer-events-none
+                                            ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}
+                                         `}>
                                             ${amount.toLocaleString()}
                                          </div>
                                          
@@ -625,10 +639,12 @@ export default function AdminPanel() {
                                                 initial={{ height: 0 }} 
                                                 animate={{ height: `${heightPercentage}%` }} 
                                                 transition={{ duration: 1, ease: "easeOut", delay: i * 0.05 }}
-                                                className="w-full bg-gradient-to-t from-[#D4AF37] to-[#F2D06B] opacity-80 group-hover:opacity-100 transition-opacity relative"
+                                                className={`w-full relative transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70'}`}
                                              >
-                                                {/* Brillo superior en la barra */}
-                                                <div className="absolute top-0 left-0 w-full h-[2px] bg-white/50"></div>
+                                                {/* Gradiente */}
+                                                <div className="absolute inset-0 bg-gradient-to-t from-[#D4AF37] to-[#F2D06B]"></div>
+                                                {/* Brillo superior */}
+                                                <div className="absolute top-0 left-0 w-full h-[2px] bg-white/60"></div>
                                              </motion.div>
                                          </div>
                                      </div>
@@ -639,7 +655,7 @@ export default function AdminPanel() {
                         {/* Etiquetas de los meses */}
                         <div className="flex justify-between mt-4 text-[8px] md:text-[10px] text-gray-400 font-bold uppercase border-t border-gray-100 pt-4 relative z-10">
                              {['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((m, i) => (
-                                <span key={i} className="text-center w-full">{m}</span>
+                                <span key={i} className={`text-center w-full transition-colors ${activeChartIndex === i ? 'text-[#D4AF37]' : ''}`}>{m}</span>
                              ))}
                         </div>
                     </div>
@@ -793,6 +809,41 @@ export default function AdminPanel() {
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Categoría</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={serviceModal.category} onChange={e => setServiceModal({...serviceModal, category: e.target.value})} /></div>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Descripción</label><textarea className="w-full p-3 bg-gray-50 rounded-xl h-24 outline-none" value={serviceModal.description} onChange={e => setServiceModal({...serviceModal, description: e.target.value})} /></div>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Link Imagen</label><input className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" value={serviceModal.img} onChange={e => setServiceModal({...serviceModal, img: e.target.value})} /></div>
+
+                                {/* --- MODIFICACIÓN: SELECTOR DE ESPECIALISTAS PARA EL SERVICIO --- */}
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Especialistas que realizan este servicio</label>
+                                    <div className="flex gap-2">
+                                        {/* Input donde se ven los nombres agregados */}
+                                        <input 
+                                            className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" 
+                                            placeholder="Nombres de especialistas..." 
+                                            value={serviceModal.specialists || ''} 
+                                            onChange={(e) => setServiceModal({...serviceModal, specialists: e.target.value})} 
+                                        />
+                                        
+                                        {/* Selector para agregar rápido */}
+                                        <select 
+                                            className="p-3 bg-gray-100 rounded-xl text-xs outline-none w-1/3"
+                                            onChange={(e) => {
+                                                if(e.target.value) {
+                                                    const current = serviceModal.specialists || '';
+                                                    const newValue = current ? `${current}, ${e.target.value}` : e.target.value;
+                                                    setServiceModal({...serviceModal, specialists: newValue});
+                                                }
+                                            }}
+                                            value=""
+                                        >
+                                            <option value="">+ Agregar</option>
+                                            {team.map((t: any) => (
+                                                <option key={t.id} value={t.name}>{t.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <p className="text-[9px] text-gray-400 mt-1">Selecciona de la lista para añadir. (Ej: Dra. Elena, Lic. Sofia)</p>
+                                </div>
+                                {/* ---------------------------------------------------- */}
+
                                 <button onClick={saveService} disabled={isProcessing} className="w-full bg-black text-white py-4 rounded-xl uppercase tracking-widest font-bold text-xs mt-4">Guardar</button>
                             </>
                         )}
@@ -811,6 +862,16 @@ export default function AdminPanel() {
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editSpecialist.name} onChange={e => setEditSpecialist({...editSpecialist, name: e.target.value})} /></div>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Rol</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editSpecialist.role} onChange={e => setEditSpecialist({...editSpecialist, role: e.target.value})} /></div>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Horario</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editSpecialist.schedule} onChange={e => setEditSpecialist({...editSpecialist, schedule: e.target.value})} /></div>
+                                {/* --- NUEVO CAMPO PARA SERVICIOS (TEXTAREA) --- */}
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tratamientos (Separar por comas)</label>
+                                    <textarea 
+                                        className="w-full p-3 bg-gray-50 rounded-xl outline-none h-20 text-xs" 
+                                        placeholder="Ej: Maderoterapia, Facial, Laser" 
+                                        value={editSpecialist.services || ''} 
+                                        onChange={e => setEditSpecialist({...editSpecialist, services: e.target.value})} 
+                                    />
+                                </div>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Link Foto</label><input className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" value={editSpecialist.img} onChange={e => setEditSpecialist({...editSpecialist, img: e.target.value})} /></div>
                                 <button onClick={saveSpecialistEdit} disabled={isProcessing} className="w-full bg-black text-white py-4 rounded-xl uppercase tracking-widest font-bold text-xs mt-4">Guardar Perfil</button>
                             </>
