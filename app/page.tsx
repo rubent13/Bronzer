@@ -55,7 +55,6 @@ const getNextDays = () => {
   return days;
 };
 
-// --- FUNCIÓN PARA PROCESAR IMÁGENES (DRIVE + UNSPLASH) ---
 const processGoogleImage = (url: string) => {
     if (!url || typeof url !== 'string') return null;
     let id = null;
@@ -365,20 +364,21 @@ export default function BronzerFullPlatform() {
                                 <div className="relative h-[300px] md:h-[350px] w-full bg-[#F5F5F5] mb-4 overflow-hidden rounded-[1.5rem] border border-gray-100 shadow-sm transition-all duration-500 group-hover:shadow-xl">
                                     {imgUrl && <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />}
                                     
-                                    {/* BOTÓN VISIBLE EN MÓVIL (block) - OCULTO EN PC (md:absolute) */}
+                                    {/* BOTÓN VISIBLE Y TACTIL EN MÓVIL (CORREGIDO) */}
                                     <button onClick={() => addToCart(prod)} className={`
-                                        block md:absolute 
-                                        bottom-0 md:bottom-4 
-                                        left-0 md:left-1/2 md:-translate-x-1/2 
-                                        w-full md:w-[90%] 
-                                        py-3 md:py-3 
-                                        md:translate-y-24 md:group-hover:translate-y-0 
+                                        absolute 
+                                        bottom-0 
+                                        left-0 
+                                        w-full 
+                                        py-4
                                         text-xs uppercase tracking-widest 
                                         ${GLASS_DARK_STYLE} 
-                                        rounded-none md:rounded-full
-                                        opacity-100 md:opacity-0 md:group-hover:opacity-100
+                                        rounded-none 
+                                        md:bottom-4 md:left-1/2 md:-translate-x-1/2 md:w-[90%] md:rounded-full md:py-3
+                                        opacity-100
+                                        md:opacity-0 md:group-hover:opacity-100 md:translate-y-24 md:group-hover:translate-y-0
                                         transition-all duration-500
-                                        z-20 cursor-pointer
+                                        z-30 cursor-pointer
                                     `}>Añadir</button>
                                 </div>
                                 <h3 className="font-medium text-base">{prod.name}</h3>
@@ -455,21 +455,21 @@ export default function BronzerFullPlatform() {
 
       <section id="servicios" className="py-16 md:py-24 bg-gray-50/50 relative">
         <div className="container mx-auto px-6 md:px-12 relative z-10">
-          <div className="flex justify-between items-end mb-12 relative z-10">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4 relative z-10">
             <h2 className={`${cinzel.className} text-2xl md:text-4xl drop-shadow-sm`}>Menú de Tratamientos</h2>
             <button 
+                onClick={() => { /* Aquí podrías ir a una página de servicios completa */ }}
                 className={`hidden md:flex items-center gap-2 px-6 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}
             >
                 Ver Todo <ArrowRight size={14} />
             </button>
           </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             {services.map((item) => {
               const imgUrl = processGoogleImage(item.img);
               return (
               <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="bg-white/80 backdrop-blur-md p-4 rounded-3xl group cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(212,175,55,0.1)] transition-all duration-500 border border-white">
-                <div className="relative h-56 md:h-64 mb-6 overflow-hidden bg-gray-100 rounded-2xl">
+                <div className="relative h-48 md:h-64 mb-6 overflow-hidden bg-gray-100 rounded-2xl">
                    {imgUrl && <img src={imgUrl} alt={item.name || item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />}
                   <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 text-xs font-bold font-serif italic rounded-full shadow-sm border border-white/50">${item.price}</div>
                 </div>
@@ -479,7 +479,6 @@ export default function BronzerFullPlatform() {
               </motion.div>
             )})}
           </div>
-          
           {/* BOTÓN MÓVIL AL FINAL (SOLO VISIBLE EN MÓVIL) */}
           <div className="flex md:hidden justify-center mt-8">
             <button className={`flex items-center gap-2 px-8 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}>Ver Todo <ArrowRight size={14} /></button>
@@ -489,7 +488,7 @@ export default function BronzerFullPlatform() {
 
       <section id="boutique" className="py-16 md:py-24 px-6 md:px-24 bg-white relative overflow-hidden">
         {/* HEADER: Título a la izquierda, Botón a la derecha (estilo solicitado) */}
-        <div className="flex justify-between items-end mb-12 relative z-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-4 relative z-10">
             <h2 className={`${cinzel.className} text-2xl md:text-4xl drop-shadow-sm`}>Bronzer Boutique</h2>
             <button 
                 onClick={() => { setShowFullShop(true); window.scrollTo(0,0); }}
@@ -505,24 +504,26 @@ export default function BronzerFullPlatform() {
             const imgUrl = processGoogleImage(prod.img);
             return (
             <div key={prod.id} className="text-center group relative">
-              <div className="relative h-[300px] md:h-[420px] w-full bg-[#F5F5F5] mb-6 overflow-hidden rounded-[2rem] border border-gray-100 shadow-sm transition-all duration-500 group-hover:shadow-xl">
+              <div className="relative h-[260px] md:h-[420px] w-full bg-[#F5F5F5] mb-6 overflow-hidden rounded-[2rem] border border-gray-100 shadow-sm transition-all duration-500 group-hover:shadow-xl">
                 {imgUrl && <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 
-                {/* BOTÓN VISIBLE SIEMPRE EN MÓVIL (block) - HOVER EN PC */}
+                {/* BOTÓN VISIBLE SIEMPRE EN MÓVIL (block) - HOVER EN PC (md:absolute) */}
                 <button onClick={() => addToCart(prod)} className={`
-                    block md:absolute 
-                    bottom-0 md:bottom-6 
-                    left-0 md:left-1/2 md:-translate-x-1/2 
-                    w-full md:w-[85%] 
-                    py-3 md:py-4 
-                    md:translate-y-24 md:group-hover:translate-y-0 
+                    absolute 
+                    bottom-0 
+                    left-0 
+                    w-full 
+                    py-4 
                     text-xs uppercase tracking-widest 
                     ${GLASS_DARK_STYLE} 
-                    rounded-none md:rounded-full
+                    rounded-none 
+                    
+                    md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:w-[85%] md:rounded-full md:py-4
                     opacity-100 md:opacity-0 md:group-hover:opacity-100
+                    md:translate-y-24 md:group-hover:translate-y-0
                     transition-all duration-500
-                    z-20 cursor-pointer
+                    z-30 cursor-pointer
                 `}>Añadir al Carrito</button>
               </div>
               <h3 className="font-medium text-lg">{prod.name}</h3>
