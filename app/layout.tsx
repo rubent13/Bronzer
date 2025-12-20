@@ -1,23 +1,27 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next"; // Asegúrate de importar Viewport
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// 1. AÑADIR ESTO PARA QUE SE VEA COMO APP EN MÓVIL
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#000000",
+};
 
 export const metadata: Metadata = {
-  title: "Bronzer Spa & Wellness",
+  title: "Bronzer Spa",
   description: "Medical Aesthetic Center",
-  manifest: "/manifest.json", // <--- ESTA LINEA ES LA CLAVE
-  themeColor: "#D4AF37",      // <--- ESTA TAMBIÉN
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0", // Esto evita zoom indeseado en inputs
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Bronzer Admin",
+  },
 };
 
 export default function RootLayout({
@@ -26,12 +30,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+    <html lang="es">
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }

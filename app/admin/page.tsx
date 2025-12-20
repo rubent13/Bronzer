@@ -4,10 +4,10 @@ import React, { useState, useEffect } from 'react';
 // Nota: No importamos Image de next/image para usar img nativa y evitar bloqueos
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  LayoutDashboard, Calendar, Users, ShoppingBag, Sparkles,
+  LayoutDashboard, Calendar, Users, ShoppingBag, Sparkles, 
   LogOut, Plus, Trash2, Edit2, Search, CheckCircle, XCircle, 
   TrendingUp, DollarSign, Clock, Save, Phone, FileText, RefreshCw, Tag,
-  Download // <--- NUEVO ICONO AGREGADO
+  Download, Loader2 // <--- ICONOS NUEVOS AGREGADOS
 } from 'lucide-react';
 import { Cinzel, Montserrat } from 'next/font/google';
 
@@ -19,7 +19,7 @@ const montserrat = Montserrat({ subsets: ['latin'], weight: ['300', '400', '500'
 const INITIAL_RESERVATIONS: any[] = [];
 const INITIAL_PRODUCTS: any[] = [];
 const INITIAL_TEAM: any[] = [];
-const INITIAL_SERVICES: any[] = [];
+const INITIAL_SERVICES: any[] = []; // NUEVO
 
 export default function AdminPanel() {
   // --- ESTADOS ---
@@ -32,7 +32,7 @@ export default function AdminPanel() {
   const [reservations, setReservations] = useState<any[]>(INITIAL_RESERVATIONS);
   const [products, setProducts] = useState<any[]>(INITIAL_PRODUCTS);
   const [team, setTeam] = useState<any[]>(INITIAL_TEAM);
-  const [services, setServices] = useState<any[]>(INITIAL_SERVICES);
+  const [services, setServices] = useState<any[]>(INITIAL_SERVICES); 
   
   // Estado Ventas
   const [salesStats, setSalesStats] = useState({ total: 0, orders: 0 });
@@ -46,56 +46,58 @@ export default function AdminPanel() {
   
   // Modales Productos y Servicios
   const [productModal, setProductModal] = useState<any>(null); 
-  const [serviceModal, setServiceModal] = useState<any>(null);
+  const [serviceModal, setServiceModal] = useState<any>(null); 
   
+  // Estado genérico para saber si estamos creando o editando
   const [isCreating, setIsCreating] = useState(false);
 
-  // --- NUEVOS ESTADOS PARA PWA (INSTALAR APP) ---
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isAppInstalled, setIsAppInstalled] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  // --- NUEVOS ESTADOS: PWA Y CARGA INICIAL ---
+  const [isDataReady, setIsDataReady] = useState(false); // Controla la pantalla de carga
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null); // Evento de instalación PWA
+  const [isAppInstalled, setIsAppInstalled] = useState(false); // Estado de instalación
+  const [isMobile, setIsMobile] = useState(false); // Detector de móvil
 
   // --- LÓGICA DE LOGIN ---
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (loginData.user === "admin" && loginData.pass === "bronzer2025") {
       setIsAuthenticated(true);
+      // Nota: La carga de datos se dispara en el useEffect cuando isAuthenticated cambia a true
     } else {
       alert("Credenciales Incorrectas");
     }
   };
 
-  // --- DETECTAR PWA Y DISPOSITIVO ---
+  // --- NUEVO: DETECCIÓN PWA E INSTALACIÓN ---
   useEffect(() => {
-    // Detectar si es móvil
     setIsMobile(window.innerWidth < 1024);
 
-    // Detectar si ya está instalada
+    // Chequear si ya es standalone (App instalada)
     if (window.matchMedia('(display-mode: standalone)').matches) {
         setIsAppInstalled(true);
     }
 
-    // Capturar el evento de instalación (Chrome/Android)
+    // Capturar evento de instalación (Chrome/Android)
     const handleBeforeInstallPrompt = (e: any) => {
         e.preventDefault();
         setDeferredPrompt(e);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('resize', () => setIsMobile(window.innerWidth < 1024));
 
     return () => {
         window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
 
-  // --- MANEJAR CLICK EN INSTALAR ---
+  // Función del botón de instalar
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
-        // Fallback para iOS (que no soporta instalación automática)
-        alert("Para instalar en iPhone/iPad:\n1. Toca el botón 'Compartir' (cuadrado con flecha).\n2. Selecciona 'Añadir a pantalla de inicio'.");
+        // Fallback para iOS (que no permite prompt automático)
+        alert("📲 Para instalar en iPhone/iPad:\n1. Toca el botón 'Compartir' (cuadrado con flecha).\n2. Busca y selecciona 'Añadir a pantalla de inicio'.");
         return;
     }
-    // Para Android/Chrome
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
@@ -108,8 +110,10 @@ export default function AdminPanel() {
     if (!url || typeof url !== 'string') return null;
     
     let id = null;
+    // Formato 1: .../d/EL_ID/...
     const matchD = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
     if (matchD && matchD[1]) id = matchD[1];
+    // Formato 2: ...id=EL_ID...
     else {
         const matchId = url.match(/id=([a-zA-Z0-9_-]+)/);
         if (matchId && matchId[1]) id = matchId[1];
@@ -124,6 +128,7 @@ export default function AdminPanel() {
   const fetchAllData = async () => {
     setIsLoadingGoogle(true);
     try {
+      // 1. Cargar Citas (Google Calendar)
       const resCal = await fetch('/api/calendar'); 
       const dataCal = await resCal.json();
       if (dataCal.success) {
@@ -149,18 +154,22 @@ export default function AdminPanel() {
         setReservations(googleBookings);
       }
 
+      // 2. Cargar Productos (Google Sheets)
       const resProd = await fetch('/api/database?tab=Productos');
       const dataProd = await resProd.json();
       if (dataProd.success) setProducts(dataProd.data);
 
+      // 3. Cargar Equipo (Google Sheets)
       const resTeam = await fetch('/api/database?tab=ESPECIALISTAS'); 
       const dataTeam = await resTeam.json();
       if (dataTeam.success) setTeam(dataTeam.data);
 
+      // 4. Cargar Servicios (NUEVO - Google Sheets)
       const resServ = await fetch('/api/database?tab=Servicios');
       const dataServ = await resServ.json();
       if (dataServ.success) setServices(dataServ.data);
 
+      // 5. Cargar Ventas (Google Sheets)
       const resSales = await fetch('/api/database?tab=Ventas');
       const dataSales = await resSales.json();
       if (dataSales.success) {
@@ -178,7 +187,13 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchAllData();
+      // NUEVO: Carga inicial asíncrona que bloquea la interfaz hasta terminar
+      const initData = async () => {
+        await fetchAllData();
+        setIsDataReady(true); // Solo mostramos el admin cuando todo cargó
+      };
+      initData();
+
       const interval = setInterval(fetchAllData, 30000); 
       return () => clearInterval(interval);
     }
@@ -297,6 +312,7 @@ export default function AdminPanel() {
       if (!serviceModal) return;
       setIsProcessing(true);
 
+      // Array ordenado para Excel: [ID, Nombre, Precio, Duracion, Categoria, Descripcion, Imagen]
       const rowData = [
           serviceModal.id, serviceModal.name, serviceModal.price, serviceModal.duration,
           serviceModal.category, serviceModal.description || '', serviceModal.img || ''
@@ -384,18 +400,37 @@ export default function AdminPanel() {
     );
   }
 
+  // --- PANTALLA DE CARGA (NUEVO) ---
+  // Si está autenticado pero los datos no están listos, mostramos esto
+  if (isAuthenticated && !isDataReady) {
+    return (
+        <div className={`h-screen w-full bg-[#0a0a0a] flex flex-col items-center justify-center text-white ${montserrat.className}`}>
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.5 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                className="flex flex-col items-center gap-6"
+            >
+                <div className="w-16 h-16 border-4 border-[#D4AF37] border-t-transparent rounded-full animate-spin"></div>
+                <h2 className={`${cinzel.className} text-2xl tracking-widest text-[#D4AF37]`}>CARGANDO DATOS...</h2>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">Sincronizando Google Cloud</p>
+            </motion.div>
+        </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen bg-[#F8F9FA] flex ${montserrat.className}`}>
       
-      {/* BOTÓN FLOTANTE PARA INSTALAR APP (SOLO SI NO ESTÁ INSTALADA) */}
+      {/* --- BOTÓN FLOTANTE PARA INSTALAR APP (SOLO MÓVIL Y NO INSTALADA) --- */}
       {!isAppInstalled && (deferredPrompt || isMobile) && (
-        <button 
+        <motion.button 
+          initial={{ y: 100 }} animate={{ y: 0 }} transition={{ delay: 1 }}
           onClick={handleInstallClick}
-          className="fixed bottom-6 right-6 z-50 bg-black text-[#D4AF37] px-6 py-4 rounded-full shadow-2xl flex items-center gap-3 text-xs uppercase tracking-widest border border-[#D4AF37] hover:scale-105 transition-transform animate-pulse"
+          className="fixed bottom-6 right-6 z-[60] bg-[#D4AF37] text-black px-6 py-4 rounded-full shadow-[0_10px_30px_rgba(212,175,55,0.4)] flex items-center gap-3 text-xs font-bold uppercase tracking-widest border-2 border-white hover:scale-105 active:scale-95 transition-all"
         >
-          <Download size={18}/>
+          <Download size={20}/>
           Instalar App
-        </button>
+        </motion.button>
       )}
 
       {/* SIDEBAR */}
@@ -405,7 +440,7 @@ export default function AdminPanel() {
         </div>
         <nav className="flex-1 p-6 space-y-2">
           {[{ id: "overview", label: "Resumen", icon: LayoutDashboard }, { id: "bookings", label: "Citas", icon: Calendar }, 
-            { id: "services", label: "Servicios", icon: Sparkles }, 
+            { id: "services", label: "Servicios", icon: Sparkles }, // NUEVO ITEM SERVICIOS
             { id: "products", label: "Productos", icon: ShoppingBag }, { id: "team", label: "Equipo", icon: Users }]
             .map((item) => (
             <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-all rounded-md ${activeTab === item.id ? 'bg-black text-white shadow-lg' : 'text-gray-500 hover:bg-gray-50'}`}>
@@ -419,7 +454,7 @@ export default function AdminPanel() {
       </aside>
 
       {/* MAIN */}
-      <main className="ml-0 md:ml-64 flex-1 p-6 md:p-12 pb-24 transition-all duration-300">
+      <main className="ml-0 md:ml-64 flex-1 p-8 md:p-12 pb-24 transition-all duration-300">
         
         {/* ENCABEZADO MÓVIL (VISIBLE SOLO EN MÓVIL) */}
         <div className="md:hidden flex justify-between items-center mb-6">
@@ -512,7 +547,7 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* --- VISTA: SERVICIOS --- */}
+        {/* --- VISTA: SERVICIOS (NUEVO APARTADO) --- */}
         {activeTab === 'services' && (
           <div>
             <div className="flex justify-end mb-6 gap-3">
@@ -632,7 +667,7 @@ export default function AdminPanel() {
       {/* --- MODAL DE PRODUCTOS --- */}
       <AnimatePresence>
         {productModal && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
                 <div className="bg-white p-8 rounded-xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
                     <h3 className={`${cinzel.className} text-xl mb-6`}>{isCreating ? 'Nuevo Producto' : 'Editar Producto'}</h3>
                     <div className="space-y-4">
