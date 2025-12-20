@@ -18,7 +18,7 @@ const montserrat = Montserrat({ subsets: ['latin'], weight: ['300', '400', '500'
 const GLASS_STYLE = "rounded-full bg-white/5 backdrop-blur-[24px] border-[0.5px] border-white/30 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_inset_0_0_20px_rgba(255,255,255,0.15),_0_8px_20px_-8px_rgba(0,0,0,0.2)] text-[#1a1a1a] font-bold tracking-widest hover:scale-105 hover:bg-white/15 hover:border-white/50 hover:shadow-[inset_0_4px_10px_rgba(255,255,255,1),_inset_0_0_30px_rgba(255,255,255,0.3),_0_15px_30px_-10px_rgba(0,0,0,0.3)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]";
 const GLASS_DARK_STYLE = "rounded-full bg-black/5 backdrop-blur-[24px] border-[0.5px] border-white/40 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),_inset_0_-2px_4px_rgba(0,0,0,0.1),_0_8px_20px_-8px_rgba(0,0,0,0.25)] text-[#1a1a1a] font-bold tracking-widest hover:scale-105 hover:bg-black/10 hover:border-white/60 hover:shadow-[inset_0_4px_10px_rgba(255,255,255,1),_inset_0_-4px_8px_rgba(0,0,0,0.15),_0_15px_30px_-10px_rgba(0,0,0,0.35)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]";
 
-// --- DATOS INICIALES (DEMO - FALLBACK) ---
+// --- DATOS INICIALES (DEMO) ---
 const INITIAL_SERVICES = [
   { id: 1, name: "Maderoterapia Sculpt", price: 80, duration: "60 min", img: "https://images.unsplash.com/photo-1519699047748-40baea60f125?q=80&w=2070&auto=format&fit=crop" },
   { id: 2, name: "Gold Facial Radiance", price: 120, duration: "90 min", img: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=2070&auto=format&fit=crop" },
@@ -55,6 +55,7 @@ const getNextDays = () => {
   return days;
 };
 
+// --- FUNCIÓN PARA PROCESAR IMÁGENES (DRIVE + UNSPLASH) ---
 const processGoogleImage = (url: string) => {
     if (!url || typeof url !== 'string') return null;
     let id = null;
@@ -360,29 +361,24 @@ export default function BronzerFullPlatform() {
                     {products.map((prod) => {
                         const imgUrl = processGoogleImage(prod.img);
                         return (
-                            <div key={prod.id} className="group relative">
+                            <div key={prod.id} className="group relative mb-8 md:mb-0">
                                 <div className="relative h-[300px] md:h-[350px] w-full bg-[#F5F5F5] mb-4 overflow-hidden rounded-[1.5rem] border border-gray-100 shadow-sm transition-all duration-500 group-hover:shadow-xl">
                                     {imgUrl && <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />}
                                     
-                                    {/* BOTÓN VISIBLE Y TACTIL EN MÓVIL (CORREGIDO) */}
+                                    {/* BOTÓN SOLO ESCRITORIO (HOVER) */}
                                     <button onClick={() => addToCart(prod)} className={`
-                                        absolute 
-                                        bottom-0 
-                                        left-0 
-                                        w-full 
-                                        py-4
-                                        text-xs uppercase tracking-widest 
-                                        ${GLASS_DARK_STYLE} 
-                                        rounded-none 
-                                        md:bottom-4 md:left-1/2 md:-translate-x-1/2 md:w-[90%] md:rounded-full md:py-3
-                                        opacity-100
-                                        md:opacity-0 md:group-hover:opacity-100 md:translate-y-24 md:group-hover:translate-y-0
-                                        transition-all duration-500
-                                        z-30 cursor-pointer
+                                        hidden md:block absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] py-3 translate-y-24 group-hover:translate-y-0 text-xs uppercase tracking-widest 
+                                        ${GLASS_DARK_STYLE} rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500
                                     `}>Añadir</button>
                                 </div>
                                 <h3 className="font-medium text-base">{prod.name}</h3>
-                                <p className="text-[#D4AF37] text-sm font-serif italic">${prod.price}</p>
+                                <p className="text-[#D4AF37] text-sm font-serif italic mb-3">${prod.price}</p>
+                                
+                                {/* BOTÓN SOLO MÓVIL (DEBAJO DEL PRODUCTO) */}
+                                <button onClick={() => addToCart(prod)} className={`
+                                    md:hidden w-full py-3 text-xs uppercase tracking-widest 
+                                    ${GLASS_DARK_STYLE} rounded-xl
+                                `}>Añadir al Carrito</button>
                             </div>
                         )
                     })}
@@ -503,31 +499,23 @@ export default function BronzerFullPlatform() {
           {products.slice(0, 3).map((prod) => {
             const imgUrl = processGoogleImage(prod.img);
             return (
-            <div key={prod.id} className="text-center group relative">
-              <div className="relative h-[260px] md:h-[420px] w-full bg-[#F5F5F5] mb-6 overflow-hidden rounded-[2rem] border border-gray-100 shadow-sm transition-all duration-500 group-hover:shadow-xl">
+            <div key={prod.id} className="text-center group relative mb-8 md:mb-0">
+              <div className="relative h-[260px] md:h-[420px] w-full bg-[#F5F5F5] mb-4 md:mb-6 overflow-hidden rounded-[2rem] border border-gray-100 shadow-sm transition-all duration-500 group-hover:shadow-xl">
                 {imgUrl && <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 
-                {/* BOTÓN VISIBLE SIEMPRE EN MÓVIL (block) - HOVER EN PC (md:absolute) */}
+                {/* BOTÓN SOLO ESCRITORIO (HOVER) */}
                 <button onClick={() => addToCart(prod)} className={`
-                    absolute 
-                    bottom-0 
-                    left-0 
-                    w-full 
-                    py-4 
-                    text-xs uppercase tracking-widest 
-                    ${GLASS_DARK_STYLE} 
-                    rounded-none 
-                    
-                    md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:w-[85%] md:rounded-full md:py-4
-                    opacity-100 md:opacity-0 md:group-hover:opacity-100
-                    md:translate-y-24 md:group-hover:translate-y-0
-                    transition-all duration-500
-                    z-30 cursor-pointer
+                    hidden md:block absolute bottom-6 left-1/2 -translate-x-1/2 w-[85%] py-4 translate-y-24 group-hover:translate-y-0 text-xs uppercase tracking-widest ${GLASS_DARK_STYLE} rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500
                 `}>Añadir al Carrito</button>
               </div>
               <h3 className="font-medium text-lg">{prod.name}</h3>
-              <p className="text-[#D4AF37] mt-1 font-serif italic font-semibold">${prod.price}</p>
+              <p className="text-[#D4AF37] mt-1 font-serif italic font-semibold mb-3">${prod.price}</p>
+              
+              {/* BOTÓN SOLO MÓVIL (DEBAJO DEL PRODUCTO) */}
+              <button onClick={() => addToCart(prod)} className={`
+                    md:hidden w-full py-3 text-xs uppercase tracking-widest ${GLASS_DARK_STYLE} rounded-xl
+              `}>Añadir al Carrito</button>
             </div>
           )})}
         </div>
