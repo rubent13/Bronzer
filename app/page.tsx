@@ -18,7 +18,7 @@ const montserrat = Montserrat({ subsets: ['latin'], weight: ['300', '400', '500'
 const GLASS_STYLE = "rounded-full bg-white/5 backdrop-blur-[24px] border-[0.5px] border-white/30 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_inset_0_0_20px_rgba(255,255,255,0.15),_0_8px_20px_-8px_rgba(0,0,0,0.2)] text-[#1a1a1a] font-bold tracking-widest hover:scale-105 hover:bg-white/15 hover:border-white/50 hover:shadow-[inset_0_4px_10px_rgba(255,255,255,1),_inset_0_0_30px_rgba(255,255,255,0.3),_0_15px_30px_-10px_rgba(0,0,0,0.3)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]";
 const GLASS_DARK_STYLE = "rounded-full bg-black/5 backdrop-blur-[24px] border-[0.5px] border-white/40 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),_inset_0_-2px_4px_rgba(0,0,0,0.1),_0_8px_20px_-8px_rgba(0,0,0,0.25)] text-[#1a1a1a] font-bold tracking-widest hover:scale-105 hover:bg-black/10 hover:border-white/60 hover:shadow-[inset_0_4px_10px_rgba(255,255,255,1),_inset_0_-4px_8px_rgba(0,0,0,0.15),_0_15px_30px_-10px_rgba(0,0,0,0.35)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]";
 
-// --- DATOS INICIALES (DEMO) ---
+// --- DATOS INICIALES (DEMO - FALLBACK) ---
 const INITIAL_SERVICES = [
   { id: 1, name: "Maderoterapia Sculpt", price: 80, duration: "60 min", img: "https://images.unsplash.com/photo-1519699047748-40baea60f125?q=80&w=2070&auto=format&fit=crop" },
   { id: 2, name: "Gold Facial Radiance", price: 120, duration: "90 min", img: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=2070&auto=format&fit=crop" },
@@ -378,6 +378,7 @@ export default function BronzerFullPlatform() {
                                         rounded-none md:rounded-full
                                         opacity-100 md:opacity-0 md:group-hover:opacity-100
                                         transition-all duration-500
+                                        z-20 cursor-pointer
                                     `}>Añadir</button>
                                 </div>
                                 <h3 className="font-medium text-base">{prod.name}</h3>
@@ -454,11 +455,15 @@ export default function BronzerFullPlatform() {
 
       <section id="servicios" className="py-16 md:py-24 bg-gray-50/50 relative">
         <div className="container mx-auto px-6 md:px-12 relative z-10">
-          <div className="flex justify-center mb-12 md:mb-16">
-            <button className={`px-8 md:px-10 py-4 md:py-5 text-lg md:text-2xl uppercase tracking-[0.15em] ${cinzel.className} ${GLASS_STYLE} flex items-center gap-3`}>
-                Menú de Tratamientos <ArrowRight size={18} className="opacity-70"/>
+          <div className="flex justify-between items-end mb-12 relative z-10">
+            <h2 className={`${cinzel.className} text-2xl md:text-4xl drop-shadow-sm`}>Menú de Tratamientos</h2>
+            <button 
+                className={`hidden md:flex items-center gap-2 px-6 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}
+            >
+                Ver Todo <ArrowRight size={14} />
             </button>
           </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             {services.map((item) => {
               const imgUrl = processGoogleImage(item.img);
@@ -474,17 +479,23 @@ export default function BronzerFullPlatform() {
               </motion.div>
             )})}
           </div>
+          
+          {/* BOTÓN MÓVIL AL FINAL (SOLO VISIBLE EN MÓVIL) */}
+          <div className="flex md:hidden justify-center mt-8">
+            <button className={`flex items-center gap-2 px-8 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}>Ver Todo <ArrowRight size={14} /></button>
+          </div>
         </div>
       </section>
 
       <section id="boutique" className="py-16 md:py-24 px-6 md:px-24 bg-white relative overflow-hidden">
-        {/* TITULO BOTÓN PARA IR A LA TIENDA COMPLETA */}
-        <div className="flex justify-center mb-12 md:mb-16 relative z-10">
-            <button
+        {/* HEADER: Título a la izquierda, Botón a la derecha (estilo solicitado) */}
+        <div className="flex justify-between items-end mb-12 relative z-10">
+            <h2 className={`${cinzel.className} text-2xl md:text-4xl drop-shadow-sm`}>Bronzer Boutique</h2>
+            <button 
                 onClick={() => { setShowFullShop(true); window.scrollTo(0,0); }}
-                className={`px-8 md:px-10 py-4 md:py-5 text-lg md:text-2xl uppercase tracking-[0.15em] ${cinzel.className} ${GLASS_STYLE} flex items-center gap-3`}
+                className={`hidden md:flex items-center gap-2 px-6 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}
             >
-                Bronzer Boutique (Ver Tienda) <ArrowRight size={18} className="opacity-70"/>
+                Ver Todo <ArrowRight size={14} />
             </button>
         </div>
         
@@ -498,7 +509,7 @@ export default function BronzerFullPlatform() {
                 {imgUrl && <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 
-                {/* BOTÓN VISIBLE EN MÓVIL (block) - OCULTO EN PC (md:absolute) */}
+                {/* BOTÓN VISIBLE SIEMPRE EN MÓVIL (block) - HOVER EN PC */}
                 <button onClick={() => addToCart(prod)} className={`
                     block md:absolute 
                     bottom-0 md:bottom-6 
@@ -511,6 +522,7 @@ export default function BronzerFullPlatform() {
                     rounded-none md:rounded-full
                     opacity-100 md:opacity-0 md:group-hover:opacity-100
                     transition-all duration-500
+                    z-20 cursor-pointer
                 `}>Añadir al Carrito</button>
               </div>
               <h3 className="font-medium text-lg">{prod.name}</h3>
@@ -518,6 +530,17 @@ export default function BronzerFullPlatform() {
             </div>
           )})}
         </div>
+
+        {/* BOTÓN MÓVIL AL FINAL */}
+        <div className="flex md:hidden justify-center mt-12 relative z-10">
+            <button 
+                onClick={() => { setShowFullShop(true); window.scrollTo(0,0); }}
+                className={`flex items-center gap-2 px-8 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}
+            >
+                Ver Todo <ArrowRight size={14} />
+            </button>
+        </div>
+
          <div className="absolute bottom-0 right-0 w-full h-1/2 bg-gradient-to-t from-gray-50 to-transparent -z-10"></div>
       </section>
 
