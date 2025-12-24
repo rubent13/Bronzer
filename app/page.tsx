@@ -91,48 +91,119 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
           </motion.div>
         </motion.h1>
         <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.5, duration: 0.8 }} className={`${montserrat.className} text-[#D4AF37] text-[10px] md:text-xs lg:text-sm tracking-[0.4em] uppercase mt-4 md:mt-6 font-medium`}>
-          Medical Aesthetic
+           DELUXE
         </motion.p>
       </motion.div>
     </motion.div>
   );
 };
 
-// --- COMPONENTE CARRITO (RESPONSIVE) ---
-const CartDrawer = ({ onClose, cart, removeFromCart, total }: any) => (
-  <>
-    <div onClick={onClose} className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-[2px]"></div>
-    <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed top-0 right-0 z-[70] h-screen w-full md:w-[400px] bg-white/90 backdrop-blur-xl shadow-2xl p-6 flex flex-col border-l border-white/50">
-      <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-        <h3 className={`${cinzel.className} text-xl`}>Tu Bolsa ({cart.length})</h3>
-        <button onClick={onClose} className="hover:text-[#D4AF37] p-2"><X size={24} /></button>
-      </div>
-      <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar">
-        {cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-gray-300">
-            <ShoppingBag size={48} strokeWidth={1} className="mb-4"/><p>Tu bolsa está vacía.</p></div>
-        ) : (
-          cart.map((item:any, idx:number) => {
-            const imgUrl = processGoogleImage(item.img);
-            return (
-                <div key={idx} className="flex gap-3 animate-in fade-in slide-in-from-right-4 bg-white/50 p-2 rounded-2xl border border-white/50 shadow-sm items-center">
-                <div className="w-14 h-14 bg-gray-100 relative overflow-hidden shrink-0 rounded-xl border border-white">
-                    {imgUrl ? <img src={imgUrl} alt={item.name} className="w-full h-full object-cover" /> : null}
+// --- COMPONENTE CARRITO CON CHECKOUT ---
+const CartDrawer = ({ onClose, cart, removeFromCart, total, onCheckout }: any) => {
+  const [view, setView] = useState('cart'); // 'cart' o 'checkout'
+  const [paymentMethod, setPaymentMethod] = useState('pago_movil');
+  const [paymentRef, setPaymentRef] = useState('');
+  const [clientInfo, setClientInfo] = useState({ name: '', phone: '' });
+
+  return (
+    <>
+      <div onClick={onClose} className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-[2px]"></div>
+      <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed top-0 right-0 z-[70] h-screen w-full md:w-[450px] bg-white/95 backdrop-blur-xl shadow-2xl flex flex-col border-l border-white/50">
+        
+        {/* Header del Carrito */}
+        <div className="flex justify-between items-center p-6 border-b border-gray-100">
+          <h3 className={`${cinzel.className} text-xl flex items-center gap-2`}>
+             {view === 'checkout' && <button onClick={() => setView('cart')} className="mr-2"><ArrowLeft size={18}/></button>}
+             {view === 'cart' ? `Tu Bolsa (${cart.length})` : 'Finalizar Compra'}
+          </h3>
+          <button onClick={onClose} className="hover:text-[#D4AF37] p-2"><X size={24} /></button>
+        </div>
+
+        {/* VISTA 1: LISTA DE PRODUCTOS */}
+        {view === 'cart' && (
+            <>
+                <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
+                    {cart.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-300">
+                        <ShoppingBag size={48} strokeWidth={1} className="mb-4"/><p>Tu bolsa está vacía.</p></div>
+                    ) : (
+                    cart.map((item:any, idx:number) => {
+                        return (
+                            <div key={idx} className="flex gap-3 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm items-center">
+                                <div className="w-16 h-16 bg-gray-50 rounded-xl overflow-hidden shrink-0">
+                                    <img src={processGoogleImage(item.img) || ''} className="w-full h-full object-cover" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-sm truncate">{item.name}</h4>
+                                    <p className="text-xs text-[#D4AF37] font-bold mt-1">${Number(item.price).toFixed(2)}</p>
+                                </div>
+                                <button onClick={() => removeFromCart(idx)} className="text-gray-300 hover:text-red-400 p-2"><Trash2 size={16} /></button>
+                            </div>
+                        )
+                    })
+                    )}
                 </div>
-                <div className="flex-1 min-w-0"><h4 className="font-medium text-sm truncate">{item.name}</h4><p className="text-xs text-[#D4AF37] mt-1">${item.price}.00</p></div>
-                <button onClick={() => removeFromCart(idx)} className="text-gray-300 hover:text-red-400 p-2"><Trash2 size={16} /></button>
-                </div>
-            )
-          })
+                {cart.length > 0 && (
+                    <div className="p-6 border-t border-gray-100 bg-gray-50/50">
+                        <div className="flex justify-between mb-6 text-lg font-medium font-serif"><span>Total</span><span>${Number(total).toFixed(2)}</span></div>
+                        <button onClick={() => setView('checkout')} className={`w-full py-4 text-xs uppercase tracking-[0.2em] ${GLASS_DARK_STYLE}`}>Ir a Pagar</button>
+                    </div>
+                )}
+            </>
         )}
-      </div>
-      <div className="border-t border-gray-100 pt-6 mt-4">
-        <div className="flex justify-between mb-4 text-lg font-medium"><span>Total</span><span>${total}.00</span></div>
-        <button className={`w-full py-4 text-xs uppercase tracking-[0.2em] ${GLASS_DARK_STYLE}`}>Ir a Pagar</button>
-      </div>
-    </motion.div>
-  </>
-);
+
+        {/* VISTA 2: PAGO (CHECKOUT) */}
+        {view === 'checkout' && (
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col">
+                <div className="space-y-4 mb-6">
+                    <div><label className="text-[10px] font-bold text-gray-400 uppercase">Nombre</label><input value={clientInfo.name} onChange={e=>setClientInfo({...clientInfo, name: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-black"/></div>
+                    <div><label className="text-[10px] font-bold text-gray-400 uppercase">Teléfono</label><input value={clientInfo.phone} onChange={e=>setClientInfo({...clientInfo, phone: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-black"/></div>
+                </div>
+
+                <h3 className="text-xs uppercase tracking-widest font-bold mb-3 text-gray-400">Método de Pago</h3>
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                    {['pago_movil', 'binance'].map(m => (
+                        <button key={m} onClick={() => setPaymentMethod(m)} className={`py-3 text-[10px] uppercase font-bold border rounded-xl ${paymentMethod === m ? 'bg-black text-[#D4AF37] border-black' : 'bg-white border-gray-200 text-gray-400'}`}>{m.replace('_', ' ')}</button>
+                    ))}
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 text-sm text-gray-600 space-y-1">
+                    {paymentMethod === 'pago_movil' ? (
+                        <>
+                            <p><strong>Banco:</strong> Banesco</p>
+                            <p><strong>Tel:</strong> 0412-123-4567</p>
+                            <p><strong>CI:</strong> V-12345678</p>
+                        </>
+                    ) : (
+                        <>
+                            <p><strong>Binance Pay ID:</strong> 123456789</p>
+                            <p><strong>Email:</strong> binance@bronzer.com</p>
+                        </>
+                    )}
+                </div>
+
+                <div className="mb-auto">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Referencia</label>
+                    <input value={paymentRef} onChange={e=>setPaymentRef(e.target.value)} className="w-full p-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-black" placeholder="Nro de comprobante"/>
+                </div>
+
+                <button 
+                    onClick={() => {
+                        if(!clientInfo.name || !paymentRef) return alert("Completa todos los datos");
+                        // Función que viene del padre para guardar la venta
+                        onCheckout({ cart, total, clientInfo, paymentMethod, paymentRef });
+                    }} 
+                    className={`w-full py-4 text-xs uppercase tracking-[0.2em] mt-6 ${GLASS_DARK_STYLE}`}
+                >
+                    Confirmar Compra
+                </button>
+            </div>
+        )}
+
+      </motion.div>
+    </>
+  );
+};
 
 // --- COMPONENTE MODAL RESERVA (RESPONSIVE & FILTRADO) ---
 const BookingModal = ({ 
@@ -144,6 +215,10 @@ const BookingModal = ({
   clientData, setClientData,
   isSubmitting, saveToDatabase, specialistsList
 }: any) => {
+
+  // --- 1. NUEVOS ESTADOS PARA EL PAGO ---
+  const [paymentMethod, setPaymentMethod] = useState('pago_movil'); // 'pago_movil', 'binance', 'efectivo'
+  const [paymentRef, setPaymentRef] = useState('');
 
   // --- LÓGICA DE FILTRADO CORREGIDA Y ROBUSTA ---
   const filteredSpecialists = selectedService
@@ -261,23 +336,91 @@ const BookingModal = ({
           </motion.div>
         )}
 
+        {/* PASO 4: CONFIRMACIÓN Y PAGO */}
         {step === 4 && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <button onClick={() => setStep(3)} className="absolute top-8 left-8 text-xs text-gray-400 underline">Volver</button>
-            <h2 className={`${cinzel.className} text-xl md:text-2xl mb-6`}>Resumen de Cita</h2>
-            <div className="bg-white/60 p-6 w-full max-w-sm mb-6 border border-gray-100 rounded-2xl text-left shadow-inner backdrop-blur-md">
-              <div className="flex items-center gap-3 mb-4 border-b border-gray-200 pb-4">
-                 <div className="w-10 h-10 rounded-full overflow-hidden relative border-2 border-white shadow-sm shrink-0">
-                    {selectedSpecialist.img && <img src={processGoogleImage(selectedSpecialist.img) || ''} alt="Spec" className="w-full h-full object-cover" />}
-                 </div>
-                 <div><p className="font-bold text-sm">{selectedSpecialist.name}</p><p className="text-xs text-gray-500">{selectedSpecialist.role}</p></div>
-              </div>
-              <p className="text-sm mb-2"><span className="text-gray-400">Cliente:</span> {clientData.name}</p>
-              <p className="text-sm mb-2"><span className="text-gray-400">Servicio:</span> {selectedService ? selectedService.title : 'Consulta General'}</p>
-              <p className="text-sm mb-2"><span className="text-gray-400">Fecha:</span> {selectedDate}</p>
-              <p className="text-sm"><span className="text-gray-400">Hora:</span> {selectedTime}</p>
+          <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-8">
+            <button onClick={() => setStep(3)} className="text-xs text-gray-400 underline mb-2 self-start">Volver</button>
+            <h2 className={`${cinzel.className} text-xl md:text-2xl mb-4`}>Finalizar Reserva</h2>
+            
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                {/* Resumen */}
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-6 text-sm">
+                    <p className="font-bold text-base mb-2">{selectedService?.name || selectedService?.title}</p>
+                    <div className="flex justify-between text-gray-500 mb-1"><span>Especialista:</span> <span className="text-black">{selectedSpecialist.name}</span></div>
+                    <div className="flex justify-between text-gray-500 mb-1"><span>Fecha:</span> <span className="text-black">{selectedDate} - {selectedTime}</span></div>
+                    <div className="flex justify-between text-gray-500 border-t border-gray-200 pt-2 mt-2"><span>Total a Pagar:</span> <span className="text-[#D4AF37] font-bold">${selectedService?.price}</span></div>
+                </div>
+
+                {/* Selección de Pago */}
+                <h3 className="text-xs uppercase tracking-widest font-bold mb-3 text-gray-400">Método de Pago</h3>
+                <div className="grid grid-cols-3 gap-2 mb-6">
+                    {['pago_movil', 'binance', 'efectivo'].map(m => (
+                        <button 
+                            key={m} 
+                            onClick={() => setPaymentMethod(m)} 
+                            className={`py-3 text-[10px] md:text-xs uppercase tracking-wider border rounded-xl transition-all ${paymentMethod === m ? 'bg-black text-[#D4AF37] border-black' : 'bg-white border-gray-200 text-gray-400 hover:border-gray-400'}`}
+                        >
+                            {m.replace('_', ' ')}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Detalles del Pago */}
+                <div className="bg-white border border-gray-200 p-5 rounded-xl mb-6 shadow-sm">
+                    {paymentMethod === 'pago_movil' && (
+                        <div className="text-sm space-y-2">
+                            <p className="font-bold text-gray-800">Datos Pago Móvil / Zelle:</p>
+                            <p className="text-gray-500">Banco: <span className="text-black">Banesco</span></p>
+                            <p className="text-gray-500">Tel: <span className="text-black">0412-123-4567</span></p>
+                            <p className="text-gray-500">CI/RIF: <span className="text-black">V-12345678</span></p>
+                            <p className="text-gray-500 mt-2 text-xs border-t pt-2">Zelle: <span className="text-black font-medium">pagos@bronzer.com</span></p>
+                        </div>
+                    )}
+                    {paymentMethod === 'binance' && (
+                        <div className="text-sm space-y-2">
+                            <p className="font-bold text-gray-800">Binance Pay:</p>
+                            <p className="text-gray-500">Pay ID: <span className="text-black font-mono bg-gray-100 px-2 py-1 rounded">123456789</span></p>
+                            <p className="text-gray-500">Email: <span className="text-black">binance@bronzer.com</span></p>
+                            <p className="text-[10px] text-[#D4AF37] mt-2">Recuerda seleccionar USDT</p>
+                        </div>
+                    )}
+                    {paymentMethod === 'efectivo' && (
+                        <div className="text-sm text-center py-4 text-gray-500">
+                            <p>Realizarás el pago directamente en nuestro mostrador el día de tu cita.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Input Referencia (Solo si no es efectivo) */}
+                {paymentMethod !== 'efectivo' && (
+                    <div className="mb-6">
+                        <label className="text-xs uppercase tracking-widest text-gray-500 mb-2 block">Número de Referencia / Comprobante</label>
+                        <input 
+                            type="text" 
+                            value={paymentRef} 
+                            onChange={(e) => setPaymentRef(e.target.value)} 
+                            className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#D4AF37] outline-none" 
+                            placeholder="Ej: 123456..." 
+                        />
+                    </div>
+                )}
             </div>
-            <button onClick={saveToDatabase} disabled={isSubmitting} className={`w-full max-w-sm py-3 px-8 text-xs tracking-widest uppercase flex justify-center gap-2 ${GLASS_DARK_STYLE} disabled:opacity-50`}>{isSubmitting ? 'Procesando...' : 'Confirmar Reserva'}</button>
+
+            <button 
+                onClick={() => {
+                    // Validar que ponga referencia si no es efectivo
+                    if(paymentMethod !== 'efectivo' && !paymentRef) {
+                        alert("Por favor ingresa el número de referencia del pago.");
+                        return;
+                    }
+                    // Enviamos los datos extra a la función de guardado
+                    saveToDatabase({ paymentMethod, paymentRef }); 
+                }} 
+                disabled={isSubmitting} 
+                className={`w-full py-4 text-xs tracking-widest uppercase ${GLASS_DARK_STYLE} disabled:opacity-50`}
+            >
+                {isSubmitting ? 'Procesando...' : 'Confirmar Reserva'}
+            </button>
           </div>
         )}
 
@@ -351,19 +494,25 @@ export default function BronzerFullPlatform() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const saveToDatabase = async () => {
+  const saveToDatabase = async (extraData?: any) => {
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/calendar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Unimos los datos del cliente con los datos extras del pago (si existen)
+      const payload = {
           name: clientData.name,
           phone: clientData.phone,
           note: clientData.note,
           service: selectedService?.name || selectedService?.title || "Servicio General",
-          date: selectedDate, time: selectedTime, specialist: selectedSpecialist?.name,
-        }),
+          date: selectedDate, 
+          time: selectedTime, 
+          specialist: selectedSpecialist?.name,
+          ...extraData // Aquí entran paymentMethod y paymentRef
+      };
+
+      const response = await fetch('/api/calendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
       if (!response.ok) throw new Error("Error server");
       const data = await response.json();
@@ -372,7 +521,24 @@ export default function BronzerFullPlatform() {
     finally { setIsSubmitting(false); }
   };
 
-  // --- SI ESTAMOS EN MODO TIENDA COMPLETA (RESPONSIVE FIX) ---
+  // ------------------------------------------------------------------
+  // 1. IMPORTANTE: LA FUNCIÓN DE CHECKOUT DEBE ESTAR AQUÍ (ANTES DE USARSE)
+  // ------------------------------------------------------------------
+  const handleCheckout = async (orderData: any) => {
+      // Aquí simulamos el guardado o lo envías a tu API
+      console.log("PEDIDO RECIBIDO:", orderData);
+      
+      // Feedback al usuario
+      alert(`¡Gracias ${orderData.clientInfo.name}! Tu pedido ha sido recibido. Te contactaremos pronto.`);
+      
+      // Limpiar y cerrar
+      setCart([]); 
+      setCartOpen(false);
+  };
+
+  // ------------------------------------------------------------------
+  // 2. AHORA SÍ: MODO TIENDA COMPLETA (RESPONSIVE FIX)
+  // ------------------------------------------------------------------
   if (showFullShop) {
       return (
         <div className={`bg-slate-50 min-h-screen text-[#1a1a1a] ${montserrat.className}`}>
@@ -405,7 +571,7 @@ export default function BronzerFullPlatform() {
                                     `}>Añadir</button>
                                 </div>
                                 <h3 className="font-medium text-base">{prod.name}</h3>
-                                <p className="text-[#D4AF37] text-sm font-serif italic mb-3">${prod.price}</p>
+                                <p className="text-[#D4AF37] text-sm font-serif italic mb-3">€{Number(prod.price).toFixed(2)}</p>
                                 
                                 {/* BOTÓN SOLO MÓVIL (DEBAJO DEL PRODUCTO) */}
                                 <button onClick={() => addToCart(prod)} className={`
@@ -417,11 +583,12 @@ export default function BronzerFullPlatform() {
                     })}
                 </div>
             </main>
-            {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} />}
+            {/* AQUÍ AGREGAMOS LA PROPIEDAD onCheckout */}
+            {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} />}
         </div>
       );
   }
-
+  
   // --- MODO LANDING PAGE (RESPONSIVE FIX) ---
   return (
     <div className={`bg-slate-50 min-h-screen text-[#1a1a1a] ${montserrat.className} selection:bg-[#D4AF37] selection:text-white ${showSplash ? 'overflow-hidden h-screen' : ''}`}>
@@ -430,31 +597,40 @@ export default function BronzerFullPlatform() {
         {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       </AnimatePresence>
       
-      <header className="fixed top-0 w-full z-50 bg-white/70 backdrop-blur-xl border-b border-white/30 shadow-sm supports-[backdrop-filter]:bg-white/60">
-        <div className="container mx-auto px-6 h-16 md:h-20 grid grid-cols-2 md:grid-cols-3 items-center relative">
-          <div className="justify-self-start">
-             <div className={`${cinzel.className} text-xl md:text-2xl tracking-[0.15em] font-semibold flex items-center gap-2 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] z-50`}>
-               BRONZER <div className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full mt-1 shadow-sm"></div>
+      <header className={`fixed top-0 w-full z-50 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] border-b ${isScrolled ? 'bg-white/90 backdrop-blur-xl border-gray-100 h-20 shadow-sm' : 'bg-transparent border-transparent h-14 md:h-20'}`}>
+        <div className="container mx-auto px-6 h-full flex items-center justify-between relative">
+          
+          {/* 1. LOGO: ANIMACIÓN DE IZQUIERDA A CENTRO */}
+          <div className={`absolute top-1/2 -translate-y-1/2 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] z-20 ${isScrolled ? 'left-1/2 -translate-x-1/2' : 'left-6 md:left-12'}`}>
+             <div className={`${cinzel.className} text-xl md:text-2xl tracking-[0.15em] font-semibold flex items-center gap-2 text-[#1a1a1a]`}>
+               BRONZER 
+               <div className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full mt-1 shadow-sm"></div>
              </div>
           </div>
-          <nav className={`hidden md:flex gap-8 text-xs tracking-[0.2em] uppercase font-medium text-gray-500 justify-self-center`}>
+
+          {/* 2. MENÚ: SE OCULTA AL BAJAR */}
+          <nav className={`hidden md:flex mx-auto gap-8 text-xs tracking-[0.2em] uppercase font-medium text-gray-500 transition-all duration-500 delay-100 ${isScrolled ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
             {['Experiencia', 'Servicios', 'Boutique', 'Contacto'].map(item => (
               <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-black transition-colors">{item}</a>
             ))}
           </nav>
-          <div className="flex items-center gap-4 md:gap-6 justify-self-end z-50 bg-transparent">
+
+          {/* 3. ICONOS Y BOTÓN: SIEMPRE A LA DERECHA (Fixed) */}
+          <div className="absolute right-6 md:right-12 top-1/2 -translate-y-1/2 flex items-center gap-4 md:gap-6 z-20">
             <div className="relative cursor-pointer hover:text-[#D4AF37] transition-colors" onClick={() => setCartOpen(true)}>
-              <ShoppingBag size={20} />
+              <ShoppingBag size={20} strokeWidth={1.5} />
               {cart.length > 0 && <span className="absolute -top-2 -right-2 bg-black text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full shadow-sm">{cart.length}</span>}
             </div>
-            {/* AQUÍ ES EL CAMBIO: Limpiamos el servicio seleccionado (setSelectedService(null)) para que salgan todos los especialistas */}
+            
+            {/* TU BOTÓN CON LA LÓGICA DE LIMPIAR SERVICIO */}
             <button 
                 onClick={() => { setSelectedService(null); setBookingStep(1); setBookingOpen(true); }} 
-                className={`hidden md:block px-8 py-3 text-xs tracking-[0.2em] uppercase ${GLASS_DARK_STYLE}`}
+                className={`hidden md:block px-8 py-3 text-xs tracking-[0.2em] uppercase transition-all duration-300 ${GLASS_STYLE} ${isScrolled ? 'bg-black text-Black border-transparent hover:bg-gray-800' : ''}`}
             >
                 Agendar
             </button>
           </div>
+          
         </div>
       </header>
 
@@ -512,7 +688,7 @@ export default function BronzerFullPlatform() {
               <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="bg-white/80 backdrop-blur-md p-4 rounded-3xl group cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(212,175,55,0.1)] transition-all duration-500 border border-white">
                 <div className="relative h-48 md:h-64 mb-6 overflow-hidden bg-gray-100 rounded-2xl">
                    {imgUrl && <img src={imgUrl} alt={item.name || item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />}
-                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 text-xs font-bold font-serif italic rounded-full shadow-sm border border-white/50">${item.price}</div>
+                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 text-xs font-bold font-serif italic rounded-full shadow-sm border border-white/50">€{item.price}</div>
                 </div>
                 <h3 className={`${cinzel.className} text-lg mb-2 pl-2`}>{item.name || item.title}</h3>
                 <div className="flex items-center gap-2 text-xs text-gray-400 mb-6 pl-2"><Clock size={12} /> {item.duration || item.time}</div>
@@ -555,7 +731,7 @@ export default function BronzerFullPlatform() {
                 `}>Añadir al Carrito</button>
               </div>
               <h3 className="font-medium text-lg">{prod.name}</h3>
-              <p className="text-[#D4AF37] mt-1 font-serif italic font-semibold mb-3">${prod.price}</p>
+              <p className="text-[#D4AF37] mt-1 font-serif italic font-semibold mb-3">€{prod.price}</p>
               
               {/* BOTÓN SOLO MÓVIL (DEBAJO DEL PRODUCTO) */}
               <button onClick={() => addToCart(prod)} className={`
@@ -592,10 +768,21 @@ export default function BronzerFullPlatform() {
       <footer id="contacto" className="bg-[#111] text-white pt-16 md:pt-24 pb-12 relative overflow-hidden">
         <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-16 mb-16 relative z-10">
              <div><h2 className={`${cinzel.className} text-2xl md:text-3xl mb-6 flex items-center gap-2`}>BRONZER <div className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full mt-2"></div></h2><p className="text-gray-400 text-sm font-light leading-7 max-w-xs">Centro estético de alto rendimiento. Fusionamos protocolos médicos con experiencias sensoriales de lujo.</p></div>
-             <div><h4 className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] mb-6 font-semibold">Contacto</h4><ul className="space-y-4 text-sm text-gray-400 font-light"><li className="flex items-center gap-3"><MapPin size={16} className="text-[#D4AF37]"/> C.C. High Fashion, Piso 5, Caracas</li><li className="flex items-center gap-3"><Phone size={16} className="text-[#D4AF37]"/> +58 412 000 0000</li><li className="flex items-center gap-3"><Mail size={16} className="text-[#D4AF37]"/> citas@bronzer.com</li></ul></div>
+             <div><h4 className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] mb-6 font-semibold">Contacto</h4><ul className="space-y-4 text-sm text-gray-400 font-light"><li className="flex items-center gap-3"><Phone size={16} className="text-[#D4AF37]"/> +58 412 000 0000</li><li className="flex items-center gap-3"><Mail size={16} className="text-[#D4AF37]"/> citas@bronzer.com</li></ul></div>
              <div><h4 className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] mb-6 font-semibold">Horarios</h4><ul className="space-y-2 text-sm text-gray-400 font-light"><li className="flex justify-between border-b border-white/10 pb-2"><span>Lunes - Viernes</span> <span>9:00 - 19:00</span></li><li className="flex justify-between border-b border-white/10 pb-2"><span>Sábados</span> <span>10:00 - 16:00</span></li><li className="flex justify-between pb-2"><span className="text-gray-500">Domingos</span> <span className="text-gray-500">Cerrado</span></li></ul></div>
         </div>
-        <div className="container mx-auto px-6 border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest text-gray-500 relative z-10"><p>© 2025 BRONZER AESTHETIC. ALL RIGHTS RESERVED.</p><div className="flex gap-6 mt-4 md:mt-0"><Instagram className="cursor-pointer hover:text-[#D4AF37] transition-colors" size={18} /><Mail className="cursor-pointer hover:text-[#D4AF37] transition-colors" size={18} /></div></div><div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[120%] h-1/2 bg-gradient-to-t from-[#D4AF37]/10 to-transparent blur-3xl -z-0 pointer-events-none"></div>
+        <div className="container mx-auto px-6 border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest text-gray-500 relative z-10">
+            <p>© 2025 BRONZER AESTHETIC. ALL RIGHTS RESERVED.</p>
+            <div className="flex gap-6 mt-4 md:mt-0">
+                {/* --- CAMBIO AQUÍ: ENLACE A INSTAGRAM --- */}
+                <a href="https://www.instagram.com/bronzerdeluxe/" target="_blank" rel="noopener noreferrer">
+                    <Instagram className="cursor-pointer hover:text-[#D4AF37] transition-colors" size={18} />
+                </a>
+                {/* --------------------------------------- */}
+                <Mail className="cursor-pointer hover:text-[#D4AF37] transition-colors" size={18} />
+            </div>
+        </div>
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[120%] h-1/2 bg-gradient-to-t from-[#D4AF37]/10 to-transparent blur-3xl -z-0 pointer-events-none"></div>
       </footer>
 
       <AnimatePresence>

@@ -577,7 +577,7 @@ export default function AdminPanel() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                          <div className="bg-white p-5 rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-gray-100">
                             <div className="flex items-center gap-2 mb-2 text-green-600"><DollarSign size={16}/> <span className="text-[10px] font-bold uppercase">Ingresos</span></div>
-                            <p className={`${cinzel.className} text-xl md:text-3xl`}>${salesStats.total}</p>
+                            <p className={`${cinzel.className} text-xl md:text-3xl`}>€{salesStats.total}</p>
                          </div>
                          <div className="bg-white p-5 rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-gray-100">
                             <div className="flex items-center gap-2 mb-2 text-blue-600"><Calendar size={16}/> <span className="text-[10px] font-bold uppercase">Citas</span></div>
@@ -630,7 +630,7 @@ export default function AdminPanel() {
                                             transform -translate-y-full pointer-events-none
                                             ${isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}
                                          `}>
-                                            ${amount.toLocaleString()}
+                                            €{amount.toLocaleString()}
                                          </div>
                                          
                                          {/* Barra Animada */}
@@ -707,7 +707,7 @@ export default function AdminPanel() {
                                 </div>
                                 <h4 className="font-bold text-xs md:text-sm truncate text-gray-800">{prod.name}</h4>
                                 <div className="flex justify-between items-center mt-2">
-                                    <p className="text-[#D4AF37] text-xs font-bold">${prod.price}</p>
+                                    <p className="text-[#D4AF37] text-xs font-bold">€{prod.price}</p>
                                     <p className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded">x{prod.stock}</p>
                                 </div>
                             </div>
@@ -734,7 +734,7 @@ export default function AdminPanel() {
                                     <p className="text-[10px] text-gray-400 line-clamp-2 leading-relaxed mb-3">{serv.description}</p>
                                 </div>
                                 <div className="flex items-center justify-between border-t border-gray-50 pt-2 mt-2">
-                                    <span className="text-[#D4AF37] font-bold text-sm">${serv.price}</span>
+                                    <span className="text-[#D4AF37] font-bold text-sm">€{serv.price}</span>
                                     <span className="text-[9px] bg-gray-50 px-2 py-1 rounded text-gray-500">{serv.duration}</span>
                                 </div>
                             </div>
