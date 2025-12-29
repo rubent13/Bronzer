@@ -602,7 +602,7 @@ export default function BronzerFullPlatform() {
 <div className="container mx-auto px-8 md:px-12 h-full flex items-center justify-between relative">
           
           {/* 1. LOGO: ANIMACIÓN DE IZQUIERDA A CENTRO */}
-          <div className={`absolute top-1/2 -translate-y-1/2 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] z-20 ${isScrolled ? 'left-1/2 -translate-x-1/2' : 'left-6 md:left-12'}`}>
+          <div className={`absolute top-1/2 -translate-y-1/2 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] z-20 ${isScrolled ? 'left-1/2 -translate-x-1/2' : 'left-8 md:left-12'}`}>
              <div className={`${cinzel.className} text-xl md:text-2xl tracking-[0.15em] font-semibold flex items-center gap-2 text-[#1a1a1a]`}>
                BRONZER 
                <div className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full mt-1 shadow-sm"></div>
