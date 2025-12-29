@@ -443,7 +443,7 @@ export default function AdminPanel() {
       <div className={`h-screen w-full bg-[#050505] flex items-center justify-center ${montserrat.className}`}>
         <div className="bg-white/10 backdrop-blur-md p-10 w-full max-w-sm text-center shadow-2xl border border-white/20 rounded-3xl">
           <h1 className={`${cinzel.className} text-4xl mb-2 text-[#D4AF37]`}>BRONZER</h1>
-          <p className="text-[10px] uppercase tracking-[0.4em] text-gray-400 mb-8">Admin Access</p>
+          <p className="text-[10px] uppercase tracking-[0.4em] text-black-400 mb-8">Admin Access</p>
           <form onSubmit={handleLogin} className="space-y-4">
             <input 
                 type="text" 
@@ -508,7 +508,7 @@ export default function AdminPanel() {
         </div>
         
         <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
-            <p className="text-[10px] uppercase text-gray-400 font-bold px-4 mb-2 mt-2">Principal</p>
+            <p className="text-[10px] uppercase text-black-400 font-bold px-4 mb-2 mt-2">Principal</p>
             {[{ id: "overview", label: "Dashboard", icon: LayoutDashboard }, { id: "bookings", label: "Reservas", icon: Calendar }].map(item => (
                 <button key={item.id} onClick={() => {setActiveTab(item.id)}} 
                     className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm rounded-xl transition-all ${activeTab === item.id ? 'bg-[#0a0a0a] text-white shadow-lg shadow-black/20' : 'text-gray-500 hover:bg-gray-50'}`}>
@@ -516,7 +516,7 @@ export default function AdminPanel() {
                 </button>
             ))}
 
-            <p className="text-[10px] uppercase text-gray-400 font-bold px-4 mb-2 mt-6">Gestión</p>
+            <p className="text-[10px] uppercase text-black-400 font-bold px-4 mb-2 mt-6">Gestión</p>
             {[{ id: "services", label: "Servicios", icon: Sparkles }, { id: "products", label: "Inventario", icon: ShoppingBag }, { id: "team", label: "Equipo", icon: Users }].map(item => (
                 <button key={item.id} onClick={() => {setActiveTab(item.id)}} 
                     className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm rounded-xl transition-all ${activeTab === item.id ? 'bg-[#0a0a0a] text-white shadow-lg shadow-black/20' : 'text-gray-500 hover:bg-gray-50'}`}>
@@ -535,7 +535,7 @@ export default function AdminPanel() {
       {/* --- BARRA DE NAVEGACIÓN INFERIOR (MÓVIL) --- */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-lg border-t border-gray-200 flex justify-around items-center p-2 z-50 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.03)]">
           {[{ id: "overview", icon: Home, label: "Inicio" }, { id: "bookings", icon: Calendar, label: "Citas" }, { id: "products", icon: ShoppingBag, label: "Inv" }, { id: "services", icon: Sparkles, label: "Serv" }, { id: "team", icon: Users, label: "Equipo" }].map(t => (
-              <button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === t.id ? 'text-[#D4AF37]' : 'text-gray-400'}`}>
+              <button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === t.id ? 'text-[#D4AF37]' : 'text-black-400'}`}>
                   <t.icon size={22} strokeWidth={activeTab === t.id ? 2.5 : 2} />
                   <span className="text-[9px] font-medium">{t.label}</span>
               </button>
@@ -553,12 +553,12 @@ export default function AdminPanel() {
                         {greeting}, {userName}
                     </h1>
                     <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-400 uppercase tracking-widest">{currentDate}</span>
+                        <span className="text-xs text-black-400 uppercase tracking-widest">{currentDate}</span>
                         {isLoadingGoogle && <Loader2 size={12} className="animate-spin text-[#D4AF37]"/>}
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                     <button onClick={fetchAllData} className="p-2.5 rounded-full bg-gray-50 text-gray-500 hover:bg-[#D4AF37] hover:text-black transition-colors">
+                     <button onClick={fetchAllData} className="p-2.5 rounded-full bg-gray-50 text-black-500 hover:bg-[#D4AF37] hover:text-black transition-colors">
                         <RefreshCw size={18} className={isLoadingGoogle ? "animate-spin" : ""}/>
                      </button>
                      <div className="w-10 h-10 rounded-full bg-[#0a0a0a] text-[#D4AF37] flex items-center justify-center font-serif font-bold border-2 border-gray-100 shadow-sm">
