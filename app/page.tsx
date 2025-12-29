@@ -598,7 +598,7 @@ export default function BronzerFullPlatform() {
       </AnimatePresence>
       
       <header className={`fixed top-0 w-full z-50 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] border-b ${isScrolled ? 'bg-white/90 backdrop-blur-xl border-gray-100 h-20 shadow-sm' : 'bg-transparent border-transparent h-14 md:h-20'}`}>
-        <div className="container mx-auto px-6 h-full flex items-center justify-between relative">
+        <div className="container mx-auto px-8 md:px-12 h-full flex items-center justify-between relative">
           
           {/* 1. LOGO: ANIMACIÓN DE IZQUIERDA A CENTRO */}
           <div className={`absolute top-1/2 -translate-y-1/2 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] z-20 ${isScrolled ? 'left-1/2 -translate-x-1/2' : 'left-6 md:left-12'}`}>
