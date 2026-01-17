@@ -318,7 +318,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
             <h2 className={`${cinzel.className} text-xl md:text-2xl mb-2 text-[#191919]`}>Selecciona tu Experto</h2>
             <p className="text-gray-500 text-sm mb-6">Elige al profesional para tu tratamiento.</p>
-            <div className="grid grid-cols-1 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
               
               {filteredSpecialists.length > 0 ? (
                   filteredSpecialists.map((spec) => {
