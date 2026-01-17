@@ -987,34 +987,31 @@ export default function BronzerFullPlatform() {
                 </div>
             </header>
             
-            <main className="container mx-auto px-6 pt-24 md:pt-32 pb-24">
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-12 md:gap-8">
+            <main className="container mx-auto px-4 pt-24 md:pt-32 pb-24">
+                {/* CAMBIO: grid-cols-2 en móvil (antes era 1) y gap-4 (más pegados) */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
                     {products.map((prod) => {
                         const imgUrl = processGoogleImage(prod.img);
                         return (
                             <div key={prod.id} className="group relative">
-                                <div className="relative h-[300px] md:h-[350px] w-full bg-white/50 mb-4 overflow-hidden rounded-[1.5rem] border border-white/50 shadow-sm transition-all duration-500 group-hover:shadow-xl">
+                                {/* Altura reducida en móvil h-[200px] */}
+                                <div className="relative h-[200px] md:h-[350px] w-full bg-[#E9E0D5]/30 mb-3 overflow-hidden rounded-[1.5rem] border border-[#E9E0D5] shadow-sm transition-all duration-500 group-hover:shadow-xl">
                                     {imgUrl && <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />}
                                     
-                                    {/* BOTÓN SOLO ESCRITORIO (HOVER) */}
-                                    <button onClick={() => addToCart(prod)} className={`
-                                        hidden md:block absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] py-3 translate-y-24 group-hover:translate-y-0 text-xs uppercase tracking-widest 
-                                        ${GLASS_DARK_STYLE} rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500
-                                    `}>Añadir</button>
+                                    {/* BOTÓN SOLO ESCRITORIO */}
+                                    <button onClick={() => addToCart(prod)} className={`hidden md:block absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] py-3 text-xs uppercase tracking-widest ${GLASS_DARK_STYLE} rounded-full opacity-0 group-hover:opacity-100 transition-all`}>Añadir</button>
                                 </div>
-                                <h3 className="font-medium text-base text-[#191919]">{prod.name}</h3>
-                                <p className="text-[#96765A] text-sm font-serif italic mb-3">€{Number(prod.price).toFixed(2)}</p>
+                                <h3 className="font-medium text-xs md:text-base text-[#191919] truncate">{prod.name}</h3>
+                                <p className="text-[#96765A] text-xs md:text-sm font-serif italic mb-2">€{Number(prod.price).toFixed(2)}</p>
                                 
-                                {/* BOTÓN SOLO MÓVIL (DEBAJO DEL PRODUCTO) */}
-                                <button onClick={() => addToCart(prod)} className={`
-                                    md:hidden w-full py-3 text-xs uppercase tracking-widest 
-                                    ${GLASS_DARK_STYLE} rounded-xl
-                                `}>Añadir al Carrito</button>
+                                {/* BOTÓN SOLO MÓVIL (Más compacto) */}
+                                <button onClick={() => addToCart(prod)} className={`md:hidden w-full py-2 text-[10px] font-bold uppercase tracking-widest ${GLASS_DARK_STYLE} rounded-lg`}>+ Añadir</button>
                             </div>
                         )
                     })}
                 </div>
             </main>
+          
             {/* AQUÍ AGREGAMOS LA PROPIEDAD onCheckout */}
             {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} />}
         </div>
