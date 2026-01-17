@@ -712,7 +712,7 @@ const ClientAccessModal = ({ onClose, onLoginSuccess }: any) => {
 
         const payload = {
             tab: "Clientes Registrados", 
-            data: [formData.email, formData.password, formData.nombre] 
+            data: [formData.fecha, formData.nombre, formData.email, formData.password,] 
         };
 
         const res = await fetch('/api/database', { 
