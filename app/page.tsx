@@ -1108,16 +1108,16 @@ export default function BronzerFullPlatform() {
          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] z-0 pointer-events-none"></div>
       </section>
 
-      <section id="servicios" className="py-16 md:py-24 bg-[#E9E0D5]/50 relative">
+   <section id="servicios" className="py-16 md:py-24 bg-[#E9E0D5]/50 relative">
         <div className="container mx-auto px-6 md:px-12 relative z-10">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4 relative z-10">
             <h2 className={`${cinzel.className} text-2xl md:text-4xl drop-shadow-sm text-[#191919]`}>Menú de Tratamientos</h2>
-            {/* BOTÓN ELIMINADO */}
           </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {services.map((item: Service) => {
+            {services.map((item: any) => {
               // BUSCA LA IMAGEN EN CUALQUIERA DE ESTOS NOMBRES
-const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item.Image);
+              const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item.Image);
               return (
               <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="bg-white/40 backdrop-blur-md p-4 rounded-3xl group cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(150,118,90,0.1)] transition-all duration-500 border border-white/50">
                 <div className="relative h-48 md:h-64 mb-6 overflow-hidden bg-[#E9E0D5] rounded-2xl">
@@ -1130,6 +1130,7 @@ const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item
               </motion.div>
             )})}
           </div>
+        </div>
       </section>
 
       {/* --- SECCIÓN BOUTIQUE 3D CAROUSEL (ESTILO NIKE) --- */}
