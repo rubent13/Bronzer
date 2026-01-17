@@ -493,12 +493,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
   );
 };
 
-// --- COMPONENTE CARRUSEL 3D "NIKE STYLE" (OPTIMIZADO) ---
+// --- COMPONENTE CARRUSEL 3D "NIKE STYLE" (OPTIMIZADO MÓVIL) ---
 const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[], addToCart: (p: any) => void, onViewAll: () => void }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
 
-  // Auto-play: Cambia cada 5 segundos
+  // Auto-play
   useEffect(() => {
     const timer = setInterval(() => {
       nextSlide();
@@ -516,34 +516,17 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
     setCurrentIndex((prev) => (prev === 0 ? products.length - 1 : prev - 1));
   };
 
-  // Variantes para la animación
   const slideVariants: Variants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 1000 : -1000,
-      opacity: 0,
-      scale: 0.8
-    }),
-    center: {
-      zIndex: 1,
-      x: 0,
-      opacity: 1,
-      scale: 1,
-      transition: { duration: 0.8, ease: "easeOut" } 
-    },
-    exit: (direction: number) => ({
-      zIndex: 0,
-      x: direction < 0 ? 1000 : -1000,
-      opacity: 0,
-      scale: 0.8,
-      transition: { duration: 0.6 }
-    })
+    enter: (direction: number) => ({ x: direction > 0 ? 1000 : -1000, opacity: 0, scale: 0.8 }),
+    center: { zIndex: 1, x: 0, opacity: 1, scale: 1, transition: { duration: 0.8, ease: "easeOut" } },
+    exit: (direction: number) => ({ zIndex: 0, x: direction < 0 ? 1000 : -1000, opacity: 0, scale: 0.8, transition: { duration: 0.6 } })
   };
 
   const currentProduct = products[currentIndex];
-  // Asegúrate de que processGoogleImage esté disponible en este scope o pásalo como prop si está fuera
+  // Asegúrate de pasar processGoogleImage o definirla fuera
   const imgUrl = processGoogleImage(currentProduct.img);
 
-  // --- LÓGICA DE SEGUIMIENTO DE MOUSE 3D ---
+  // Lógica 3D Mouse
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotateX = useTransform(y, [-100, 100], [15, -15]); 
@@ -561,36 +544,29 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
     y.set(yPct);
   }
 
-  function handleMouseLeave() {
-    x.set(0);
-    y.set(0);
-  }
+  function handleMouseLeave() { x.set(0); y.set(0); }
 
   return (
-    // CAMBIO 1: Altura dinámica (100vh en móvil, 700px en PC)
-    <div className="w-full min-h-[100vh] md:min-h-[700px] relative flex flex-col md:flex-row items-center justify-center overflow-hidden py-20 md:py-0">
+    // CAMBIO: h-auto en móvil, min-h-screen en PC. Padding vertical ajustado.
+    <div className="w-full h-auto md:min-h-[700px] relative flex flex-col items-center justify-center overflow-hidden py-12 md:py-0 bg-[#E9E0D5]">
       
-      {/* BOTÓN VER TODO (FLOTANTE) */}
+      {/* Botón Ver Todo */}
       <div className="absolute top-4 right-4 md:top-8 md:right-8 z-40">
-          <button 
-              onClick={onViewAll}
-              className={`flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-[10px] md:text-xs uppercase tracking-widest ${GLASS_STYLE} bg-white/40`}
-          >
+          <button onClick={onViewAll} className={`flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-[10px] md:text-xs uppercase tracking-widest ${GLASS_STYLE} bg-white/40`}>
               Ver Todo <ArrowRight size={14} />
           </button>
       </div>
 
-      {/* FONDO DINÁMICO */}
-      <div className="absolute inset-0 bg-[#E9E0D5] transition-colors duration-700">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center pointer-events-none select-none overflow-hidden">
+      {/* Fondo Dinámico */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center overflow-hidden">
           <motion.h1 
             key={currentProduct.id}
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 0.1 }}
             exit={{ y: -100, opacity: 0 }}
             transition={{ duration: 0.8 }}
-            // CAMBIO 2: Texto de fondo más pequeño en móvil para no romper
-            className={`${cinzel.className} text-[20vw] md:text-[15vw] leading-none font-bold text-[#96765A] whitespace-nowrap uppercase`}
+            className={`${cinzel.className} text-[18vw] md:text-[15vw] leading-none font-bold text-[#96765A] whitespace-nowrap uppercase`}
           >
             BRONZER
           </motion.h1>
@@ -598,85 +574,68 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
         <div className="absolute top-0 right-0 w-full md:w-3/4 h-full bg-gradient-to-b md:bg-gradient-to-l from-white/40 to-transparent"></div>
       </div>
 
-      <div className="container mx-auto px-6 relative z-10 w-full h-full flex items-center justify-center">
-        <AnimatePresence initial={false} custom={direction} mode="wait">
-          <motion.div
-            key={currentIndex}
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            // CAMBIO 3: Gap reducido en móvil
-            className="w-full flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12"
-          >
-            
-            {/* IZQUIERDA: TEXTO E INFO */}
-            <div className="w-full md:w-1/2 text-left space-y-4 md:space-y-6 md:pl-12 order-2 md:order-1 relative z-20 mt-4 md:mt-0">
-               <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
-                  <span className="inline-block py-1 px-3 border border-[#96765A] rounded-full text-[9px] md:text-[10px] uppercase tracking-widest text-[#96765A] mb-2 md:mb-4">
-                    Destacado
-                  </span>
-                  
-                  {/* CAMBIO 4: Texto título responsivo */}
-                  <h2 className={`${cinzel.className} text-3xl md:text-6xl text-[#191919] leading-tight`}>
-                    {currentProduct.name}
-                  </h2>
-                  
-                  <p className="text-[#6D6D6D] text-xs md:text-base max-w-md mt-2 md:mt-4 leading-relaxed font-light line-clamp-3 md:line-clamp-none">
-                    {currentProduct.description || "Experimenta la máxima pureza y lujo con nuestra fórmula exclusiva."}
-                  </p>
-                  
-                  <div className="flex items-center gap-4 md:gap-6 mt-6 md:mt-8">
-                    <p className={`${cinzel.className} text-2xl md:text-3xl text-[#96765A]`}>€{Number(currentProduct.price).toFixed(2)}</p>
-                    <button 
-                      onClick={() => addToCart(currentProduct)}
-                      className={`px-6 py-3 md:px-8 md:py-4 bg-[#191919] text-[#E9E0D5] text-[10px] md:text-xs uppercase tracking-[0.2em] rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl hover:shadow-2xl flex items-center gap-2`}
-                    >
-                      Agregar <span className="hidden md:inline">al Carrito</span> <ShoppingBag size={16}/>
-                    </button>
-                  </div>
-               </motion.div>
-            </div>
-
-            {/* DERECHA: IMAGEN 3D */}
-            {/* CAMBIO 5: Altura controlada en móvil (h-[300px]) para que quepa todo */}
-            <motion.div 
-              className="w-full md:w-1/2 h-[300px] md:h-[600px] flex items-center justify-center perspective-1000 cursor-pointer order-1 md:order-2"
-              onMouseMove={handleMouse}
-              onMouseLeave={handleMouseLeave}
-              whileHover={{ scale: 1.05 }}
+      <div className="container mx-auto px-6 relative z-10 w-full flex flex-col items-center">
+        
+        {/* AREA DEL SLIDER */}
+        <div className="w-full h-[500px] md:h-full flex items-center justify-center relative mb-8 md:mb-0">
+            <AnimatePresence initial={false} custom={direction} mode="wait">
+            <motion.div
+                key={currentIndex}
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="w-full flex flex-col md:flex-row items-center justify-between gap-6 md:gap-12 absolute md:relative top-0 md:top-auto"
             >
-               <motion.div 
-                  style={{ rotateX, rotateY, x, y }}
-                  className="relative w-full max-w-xs md:max-w-md aspect-square"
-               >
-                  <div className="absolute inset-0 bg-[#96765A]/20 rounded-full blur-3xl scale-75 transform translate-y-10 -z-10"></div>
-                  {imgUrl && (
-                    <img src={imgUrl} alt={currentProduct.name} className="w-full h-full object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.3)] md:drop-shadow-[0_35px_35px_rgba(0,0,0,0.4)]" />
-                  )}
-               </motion.div>
+                {/* INFO (Izquierda en PC, Abajo en Móvil) */}
+                <div className="w-full md:w-1/2 text-left space-y-4 md:pl-12 order-2 md:order-1 relative z-20 mt-4 md:mt-0">
+                    <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+                        <span className="inline-block py-1 px-3 border border-[#96765A] rounded-full text-[9px] md:text-[10px] uppercase tracking-widest text-[#96765A] mb-2 md:mb-4">Destacado</span>
+                        <h2 className={`${cinzel.className} text-3xl md:text-6xl text-[#191919] leading-tight`}>{currentProduct.name}</h2>
+                        <p className="text-[#6D6D6D] text-xs md:text-base max-w-md mt-2 md:mt-4 leading-relaxed font-light line-clamp-3 md:line-clamp-none">{currentProduct.description || "Lujo y pureza para tu piel."}</p>
+                        <div className="flex items-center gap-4 md:gap-6 mt-6 md:mt-8">
+                            <p className={`${cinzel.className} text-2xl md:text-3xl text-[#96765A]`}>€{Number(currentProduct.price).toFixed(2)}</p>
+                            <button onClick={() => addToCart(currentProduct)} className={`px-6 py-3 md:px-8 md:py-4 bg-[#191919] text-[#E9E0D5] text-[10px] md:text-xs uppercase tracking-[0.2em] rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-2`}>
+                            Agregar <ShoppingBag size={16}/>
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+
+                {/* IMAGEN 3D (Derecha en PC, Arriba en Móvil) */}
+                <motion.div 
+                className="w-full md:w-1/2 h-[250px] md:h-[600px] flex items-center justify-center perspective-1000 cursor-pointer order-1 md:order-2"
+                onMouseMove={handleMouse}
+                onMouseLeave={handleMouseLeave}
+                whileHover={{ scale: 1.05 }}
+                >
+                    <motion.div style={{ rotateX, rotateY, x, y }} className="relative w-full max-w-[280px] md:max-w-md aspect-square">
+                        <div className="absolute inset-0 bg-[#96765A]/20 rounded-full blur-3xl scale-75 transform translate-y-10 -z-10"></div>
+                        {imgUrl && <img src={imgUrl} alt={currentProduct.name} className="w-full h-full object-contain drop-shadow-[0_15px_15px_rgba(0,0,0,0.3)] md:drop-shadow-[0_35px_35px_rgba(0,0,0,0.4)]" />}
+                    </motion.div>
+                </motion.div>
+
             </motion.div>
-
-          </motion.div>
-        </AnimatePresence>
-
-       {/* CONTROLES */}
-
-        <div className="absolute bottom-0 md:bottom 10 left-1/2 -translate-x-1/2 flex items-center gap-6 md:gap-8 z-30">
-            <button onClick={prevSlide} className="p-2 md:p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowLeft size={16}/></button>
-            {/* PUNTOS DE NAVEGACIÓN */}
-            <div className="flex gap-2">
-              {products.map((_, idx) => (
-                <div  
-                  key={idx} 
-                  onClick={() => { setDirection(idx > currentIndex ? 1 : -1); setCurrentIndex(idx); }}
-                  className={`h-1 cursor-pointer transition-all duration-300 rounded-full ${idx === currentIndex ? 'w-6 md:w-8 bg-[#191919]' : 'w-2 bg-[#191919]/30'}`}
-                />
-              ))}
-            </div>
-            <button onClick={nextSlide} className="p-2 md:p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowRight size={16}/></button>
+            </AnimatePresence>
         </div>
+
+        {/* CONTROLES (ABAJO DE TODO EN MÓVIL) */}
+        {/* En móvil: relative mt-8 (debajo del contenido). En PC: absolute bottom-10 */}
+        <div className="relative md:absolute mt-8 md:mt-0 md:bottom-10 left-auto md:left-1/2 md:-translate-x-1/2 flex items-center gap-6 md:gap-8 z-30">
+            <button onClick={prevSlide} className="p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowLeft size={18}/></button>
+            <div className="flex gap-2">
+                {products.map((_, idx) => (
+                    <div 
+                    key={idx} 
+                    onClick={() => { setDirection(idx > currentIndex ? 1 : -1); setCurrentIndex(idx); }}
+                    className={`h-1 cursor-pointer transition-all duration-300 rounded-full ${idx === currentIndex ? 'w-8 bg-[#191919]' : 'w-2 bg-[#191919]/30'}`}
+                    />
+                ))}
+            </div>
+            <button onClick={nextSlide} className="p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowRight size={18}/></button>
+        </div>
+
       </div>
     </div>
   );
