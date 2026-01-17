@@ -493,7 +493,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   );
 };
 
-// --- COMPONENTE CARRUSEL 3D "NIKE STYLE" ---
+// --- COMPONENTE CARRUSEL 3D "NIKE STYLE" (OPTIMIZADO) ---
 const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[], addToCart: (p: any) => void, onViewAll: () => void }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -540,6 +540,7 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
   };
 
   const currentProduct = products[currentIndex];
+  // Asegúrate de que processGoogleImage esté disponible en este scope o pásalo como prop si está fuera
   const imgUrl = processGoogleImage(currentProduct.img);
 
   // --- LÓGICA DE SEGUIMIENTO DE MOUSE 3D ---
@@ -566,13 +567,14 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
   }
 
   return (
-    <div className="w-full h-full min-h-[700px] relative flex flex-col md:flex-row items-center justify-center overflow-hidden">
+    // CAMBIO 1: Altura dinámica (100vh en móvil, 700px en PC)
+    <div className="w-full min-h-[100vh] md:min-h-[700px] relative flex flex-col md:flex-row items-center justify-center overflow-hidden py-20 md:py-0">
       
-      {/* BOTÓN VER TODO (FLOTANTE EN LA ESQUINA SUPERIOR DERECHA) */}
-      <div className="absolute top-8 right-8 z-40">
+      {/* BOTÓN VER TODO (FLOTANTE) */}
+      <div className="absolute top-4 right-4 md:top-8 md:right-8 z-40">
           <button 
               onClick={onViewAll}
-              className={`flex items-center gap-2 px-6 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE} bg-white/40`}
+              className={`flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-[10px] md:text-xs uppercase tracking-widest ${GLASS_STYLE} bg-white/40`}
           >
               Ver Todo <ArrowRight size={14} />
           </button>
@@ -587,12 +589,13 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
             animate={{ y: 0, opacity: 0.1 }}
             exit={{ y: -100, opacity: 0 }}
             transition={{ duration: 0.8 }}
-            className={`${cinzel.className} text-[15vw] leading-none font-bold text-[#96765A] whitespace-nowrap uppercase`}
+            // CAMBIO 2: Texto de fondo más pequeño en móvil para no romper
+            className={`${cinzel.className} text-[20vw] md:text-[15vw] leading-none font-bold text-[#96765A] whitespace-nowrap uppercase`}
           >
             BRONZER
           </motion.h1>
         </div>
-        <div className="absolute top-0 right-0 w-3/4 h-full bg-gradient-to-l from-white/40 to-transparent"></div>
+        <div className="absolute top-0 right-0 w-full md:w-3/4 h-full bg-gradient-to-b md:bg-gradient-to-l from-white/40 to-transparent"></div>
       </div>
 
       <div className="container mx-auto px-6 relative z-10 w-full h-full flex items-center justify-center">
@@ -604,48 +607,53 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
             initial="enter"
             animate="center"
             exit="exit"
-            className="w-full flex flex-col md:flex-row items-center justify-between gap-12"
+            // CAMBIO 3: Gap reducido en móvil
+            className="w-full flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12"
           >
             
             {/* IZQUIERDA: TEXTO E INFO */}
-            <div className="w-full md:w-1/2 text-left space-y-6 md:pl-12 order-2 md:order-1 relative z-20">
+            <div className="w-full md:w-1/2 text-left space-y-4 md:space-y-6 md:pl-12 order-2 md:order-1 relative z-20 mt-4 md:mt-0">
                <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
-                  <span className="inline-block py-1 px-3 border border-[#96765A] rounded-full text-[10px] uppercase tracking-widest text-[#96765A] mb-4">
+                  <span className="inline-block py-1 px-3 border border-[#96765A] rounded-full text-[9px] md:text-[10px] uppercase tracking-widest text-[#96765A] mb-2 md:mb-4">
                     Destacado
                   </span>
-                  <h2 className={`${cinzel.className} text-4xl md:text-6xl text-[#191919] leading-tight`}>
+                  
+                  {/* CAMBIO 4: Texto título responsivo */}
+                  <h2 className={`${cinzel.className} text-3xl md:text-6xl text-[#191919] leading-tight`}>
                     {currentProduct.name}
                   </h2>
-                  <p className="text-[#6D6D6D] text-sm md:text-base max-w-md mt-4 leading-relaxed font-light">
+                  
+                  <p className="text-[#6D6D6D] text-xs md:text-base max-w-md mt-2 md:mt-4 leading-relaxed font-light line-clamp-3 md:line-clamp-none">
                     {currentProduct.description || "Experimenta la máxima pureza y lujo con nuestra fórmula exclusiva."}
                   </p>
                   
-                  <div className="flex items-center gap-6 mt-8">
-                    <p className={`${cinzel.className} text-3xl text-[#96765A]`}>€{Number(currentProduct.price).toFixed(2)}</p>
+                  <div className="flex items-center gap-4 md:gap-6 mt-6 md:mt-8">
+                    <p className={`${cinzel.className} text-2xl md:text-3xl text-[#96765A]`}>€{Number(currentProduct.price).toFixed(2)}</p>
                     <button 
                       onClick={() => addToCart(currentProduct)}
-                      className={`px-8 py-4 bg-[#191919] text-[#E9E0D5] text-xs uppercase tracking-[0.2em] rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl hover:shadow-2xl flex items-center gap-2`}
+                      className={`px-6 py-3 md:px-8 md:py-4 bg-[#191919] text-[#E9E0D5] text-[10px] md:text-xs uppercase tracking-[0.2em] rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl hover:shadow-2xl flex items-center gap-2`}
                     >
-                      Agregar al Carrito <ShoppingBag size={16}/>
+                      Agregar <span className="hidden md:inline">al Carrito</span> <ShoppingBag size={16}/>
                     </button>
                   </div>
                </motion.div>
             </div>
 
             {/* DERECHA: IMAGEN 3D */}
+            {/* CAMBIO 5: Altura controlada en móvil (h-[300px]) para que quepa todo */}
             <motion.div 
-              className="w-full md:w-1/2 h-[400px] md:h-[600px] flex items-center justify-center perspective-1000 cursor-pointer order-1 md:order-2"
+              className="w-full md:w-1/2 h-[300px] md:h-[600px] flex items-center justify-center perspective-1000 cursor-pointer order-1 md:order-2"
               onMouseMove={handleMouse}
               onMouseLeave={handleMouseLeave}
               whileHover={{ scale: 1.05 }}
             >
                <motion.div 
                   style={{ rotateX, rotateY, x, y }}
-                  className="relative w-full max-w-md aspect-square"
+                  className="relative w-full max-w-xs md:max-w-md aspect-square"
                >
                   <div className="absolute inset-0 bg-[#96765A]/20 rounded-full blur-3xl scale-75 transform translate-y-10 -z-10"></div>
                   {imgUrl && (
-                    <img src={imgUrl} alt={currentProduct.name} className="w-full h-full object-contain drop-shadow-[0_35px_35px_rgba(0,0,0,0.4)]" />
+                    <img src={imgUrl} alt={currentProduct.name} className="w-full h-full object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.3)] md:drop-shadow-[0_35px_35px_rgba(0,0,0,0.4)]" />
                   )}
                </motion.div>
             </motion.div>
@@ -654,19 +662,19 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
         </AnimatePresence>
 
         {/* CONTROLES */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-8 z-30">
-            <button onClick={prevSlide} className="p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowLeft size={20}/></button>
+        <div className="absolute bottom-8 md:bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-6 md:gap-8 z-30">
+            <button onClick={prevSlide} className="p-2 md:p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowLeft size={16}/></button>
             {/* PUNTOS DE NAVEGACIÓN */}
             <div className="flex gap-2">
               {products.map((_, idx) => (
                 <div 
                   key={idx} 
                   onClick={() => { setDirection(idx > currentIndex ? 1 : -1); setCurrentIndex(idx); }}
-                  className={`h-1 cursor-pointer transition-all duration-300 rounded-full ${idx === currentIndex ? 'w-8 bg-[#191919]' : 'w-2 bg-[#191919]/30'}`}
+                  className={`h-1 cursor-pointer transition-all duration-300 rounded-full ${idx === currentIndex ? 'w-6 md:w-8 bg-[#191919]' : 'w-2 bg-[#191919]/30'}`}
                 />
               ))}
             </div>
-            <button onClick={nextSlide} className="p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowRight size={20}/></button>
+            <button onClick={nextSlide} className="p-2 md:p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowRight size={16}/></button>
         </div>
       </div>
     </div>
