@@ -676,7 +676,7 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
 // --- COMPONENTE ZONA PRIVADA DE CLIENTES ---
 const ClientAccessModal = ({ onClose, onLoginSuccess }: any) => {
   const [view, setView] = useState('login'); 
-  const [formData, setFormData] = useState({ email: '', password: '', nombre: '' });
+  const [formData, setFormData] = useState({ fecha: '', nombre: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
