@@ -89,9 +89,9 @@ export async function GET(request: Request) {
            return {
              ...baseObj,
              Fecha: row[0],    // Columna A
-             Email: row[1],    // Columna B
-             Password: row[2], // Columna C
-             Nombre: row[3]    // Columna D
+             Nombre: row[1], // Columna B
+             Email: row[2], // Columna C
+             Password: row[3], // Columna D
            };
         }
 
