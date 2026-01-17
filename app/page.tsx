@@ -1130,11 +1130,6 @@ const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item
               </motion.div>
             )})}
           </div>
-          {/* BOTÓN MÓVIL AL FINAL (SOLO VISIBLE EN MÓVIL) */}
-          <div className="flex md:hidden justify-center mt-8">
-            <button className={`flex items-center gap-2 px-8 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}>Ver Todo <ArrowRight size={14} /></button>
-          </div>
-        </div>
       </section>
 
       {/* --- SECCIÓN BOUTIQUE 3D CAROUSEL (ESTILO NIKE) --- */}
