@@ -675,37 +675,35 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
 
 // --- COMPONENTE ZONA PRIVADA DE CLIENTES ---
 const ClientAccessModal = ({ onClose, onLoginSuccess }: any) => {
-  const [view, setView] = useState('login'); // 'login', 'register'
+  const [view, setView] = useState('login'); 
   const [formData, setFormData] = useState({ email: '', password: '', nombre: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Función para Iniciar Sesión o Registrarse
   const handleAuth = async () => {
     setLoading(true);
     setError('');
     
     try {
       if (view === 'login') {
-        // 1. MODO LOGIN: Buscamos en la hoja CLIENTES
-        const res = await fetch('/api/database?tab=CLIENTES');
+        const res = await fetch('/api/database?tab=Clientes Registrados');
         const data = await res.json();
         
         if (data.success) {
-          // Buscamos si existe el usuario y coincide la contraseña
           const user = data.data.find((u: any) => 
             u.Email?.toLowerCase() === formData.email.toLowerCase() && 
             String(u.Password) === formData.password
           );
 
           if (user) {
-            onLoginSuccess(user); // ¡Éxito!
+            onLoginSuccess(user);
           } else {
             setError('Correo o contraseña incorrectos.');
           }
+        } else {
+            setError('Error conectando con la base de datos.');
         }
       } else {
-        // 2. MODO REGISTRO: Guardamos en la hoja CLIENTES
         if(!formData.nombre || !formData.email || !formData.password) {
             setError("Todos los campos son obligatorios.");
             setLoading(false);
@@ -713,26 +711,27 @@ const ClientAccessModal = ({ onClose, onLoginSuccess }: any) => {
         }
 
         const payload = {
-            sheetName: "CLIENTES", // Pestaña del Excel
-            Email: formData.email,
-            Password: formData.password,
-            Nombre: formData.nombre
+            tab: "Clientes Registrados", 
+            data: [formData.email, formData.password, formData.nombre] 
         };
 
-        const res = await fetch('/api/calendar', { // Usamos tu API universal
+        const res = await fetch('/api/database', { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
-        if (res.ok) {
+        const result = await res.json();
+
+        if (result.success) {
             alert("¡Registro exitoso! Ahora puedes iniciar sesión.");
             setView('login');
         } else {
-            setError("Error al registrar. Intenta de nuevo.");
+            setError("Error al registrar: " + (result.error || "Intenta de nuevo."));
         }
       }
     } catch (err) {
+      console.error(err);
       setError("Error de conexión.");
     } finally {
       setLoading(false);
@@ -1081,26 +1080,46 @@ export default function BronzerFullPlatform() {
         </div>
       </header>
 
-      {/* HERO SECTION CORREGIDA: Padding Top Aumentado (pt-28) */}
-      <section className="relative min-h-screen pt-28 md:pt-32 flex flex-col md:flex-row">
-        <div className="w-full md:w-1/2 flex flex-col justify-center px-6 md:px-24 py-12 md:py-0 relative overflow-hidden order-2 md:order-1">
-           <div className="absolute inset-0 bg-gradient-to-br from-white via-[#E9E0D5] to-[#C8B29C]/10 -z-10"></div>
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: showSplash ? 3.8 : 0.2}} className="relative z-10">
-            <span className="text-[#96765A] text-xs tracking-[0.4em] uppercase font-bold mb-4 block">Medical Aesthetic</span>
-            <h1 className={`${cinzel.className} text-4xl md:text-5xl lg:text-7xl leading-[1.1] mb-6 text-[#191919] drop-shadow-sm`}>Centro <br/> Estético y <span className="italic text-gray-400 font-serif">Spa.</span></h1>
-            <p className="text-gray-600 font-light leading-relaxed max-w-md mb-8 md:mb-10 text-sm md:text-base">Elevamos el estándar de la belleza. Tecnología de vanguardia en un ambiente de calma absoluta.</p>
-            {/* AQUÍ TAMBIÉN: Limpiamos el servicio seleccionado para el botón del Hero */}
-            <button 
-                onClick={() => { setSelectedService(null); setBookingStep(1); setBookingOpen(true); }} 
-                className={`flex w-fit items-center gap-4 px-6 md:px-8 py-3 md:py-4 text-xs uppercase tracking-widest ${GLASS_STYLE}`}
-            >
-                Reservar Cita <ArrowRight size={14} />
-            </button>
-          </motion.div>
+      {/* HERO SECTION CON VIDEO DE FONDO (FULL SCREEN) */}
+      <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
+        
+        {/* 1. VIDEO DE FONDO (OCUPA TODO EL ESPACIO) */}
+        <div className="absolute inset-0 z-0">
+          <video 
+            className="w-full h-full object-cover" 
+            autoPlay 
+            loop 
+            muted 
+            playsInline 
+          >
+            <source src="/portada.mp4" type="video/mp4" />
+          </video>
+          {/* Capas de superposición para legibilidad del texto */}
+          <div className="absolute inset-0 bg-white/20"></div>
+          {/* Gradiente: Sólido a la izquierda (texto), transparente a la derecha (video) */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#FAF9F6] via-[#FAF9F6]/10 to-transparent"></div>
         </div>
-        <div className="w-full md:w-1/2 h-[40vh] md:h-auto relative order-1 md:order-2">
-          <Image src="/PORTADA.SVG.jpg" alt="Skin Care Luxury" fill className="object-cover" priority />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#E9E0D5]/20 to-transparent mix-blend-overlay"></div>
+
+        {/* 2. CONTENIDO (SOBRE EL VIDEO) */}
+        <div className="container mx-auto px-6 md:px-12 relative z-10 w-full h-full flex flex-col justify-center">
+          <div className="w-full md:w-1/2">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ duration: 0.8, delay: showSplash ? 3.8 : 0.2}} 
+            >
+              <span className="text-[#96765A] text-xs tracking-[0.4em] uppercase font-bold mb-4 block">Medical Aesthetic</span>
+              <h1 className={`${cinzel.className} text-4xl md:text-5xl lg:text-7xl leading-[1.1] mb-6 text-[#191919] drop-shadow-sm`}>Centro <br/> Estético y <span className="italic text-[#6D6D6D] font-serif">Spa.</span></h1>
+              <p className="text-[#191919] font-medium leading-relaxed max-w-md mb-8 md:mb-10 text-sm md:text-base">Elevamos el estándar de la belleza. Tecnología de vanguardia en un ambiente de calma absoluta.</p>
+              
+              <button 
+                  onClick={() => { setSelectedService(null); setBookingStep(1); setBookingOpen(true); }} 
+                  className={`flex w-fit items-center gap-4 px-6 md:px-8 py-3 md:py-4 text-xs uppercase tracking-widest ${GLASS_STYLE} bg-white/80 hover:bg-[#96765A] hover:text-white transition-all`}
+              >
+                  Reservar Cita <ArrowRight size={14} />
+              </button>
+            </motion.div>
+          </div>
         </div>
       </section>
 

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// Función inteligente para elegir la hoja de cálculo correcta
+// MODIFICACIÓN: Ahora acepta 'tab' para saber qué archivo de Excel abrir
 const getSheetsParams = (tab?: string | null) => {
   const auth = new google.auth.GoogleAuth({
     credentials: {
@@ -15,37 +15,26 @@ const getSheetsParams = (tab?: string | null) => {
   
   const sheets = google.sheets({ version: 'v4', auth });
   
-  // SI LA PESTAÑA ES 'Clientes Registrados' O 'CLIENTES', USAMOS EL ID DE LA NUEVA HOJA
-  // SI NO, USAMOS LA HOJA GENERAL (process.env.GOOGLE_SHEET_ID)
-  // ID NUEVO: 1HaqEU4SnWdEDldvZTs0-hQUE6SBL2e7Zsy7X7dXOZ0Q
-  const spreadsheetId = (tab === 'Clientes Registrados' || tab === 'CLIENTES') 
+  // SI ES LA PESTAÑA DE CLIENTES, USAMOS EL ID ESPECÍFICO QUE ME DISTE
+  // SI NO, USAMOS EL ID GENERAL DE SIEMPRE
+  const spreadsheetId = (tab === 'Clientes Registrados') 
     ? '1HaqEU4SnWdEDldvZTs0-hQUE6SBL2e7Zsy7X7dXOZ0Q' 
     : process.env.GOOGLE_SHEET_ID;
 
   return { sheets, spreadsheetId };
 };
-
-// Función de ayuda para normalizar el nombre de la pestaña
-// Esto asegura que si el código envía "CLIENTES", Google busque "Clientes Registrados"
-const normalizeTabName = (tab: string | null) => {
-    if (tab === 'CLIENTES' || tab === 'Clientes Registrados') return 'Clientes Registrados';
-    return tab;
-};
-
 // --- LEER (GET) ---
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const rawTab = searchParams.get('tab'); 
-    if (!rawTab) return NextResponse.json({ success: false, error: 'Falta la pestaña' });
+    const tab = searchParams.get('tab'); 
+    if (!tab) return NextResponse.json({ success: false, error: 'Falta la pestaña' });
 
-    // 1. Normalizamos el nombre (para que coincida con tu Excel)
-    const tab = normalizeTabName(rawTab);
-
-    // 2. Obtenemos params con el ID correcto
+    // Pasamos el tab para elegir el archivo correcto
     const { sheets, spreadsheetId } = getSheetsParams(tab);
 
-    // Leemos un rango amplio.
+    // Leemos un rango amplio
+    // IMPORTANTE: Ponemos comillas simples '' al nombre del tab por si tiene espacios
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `'${tab}'!A2:H100`, 
@@ -54,9 +43,9 @@ export async function GET(request: Request) {
     const rows = response.data.values || [];
     
     const data = rows.map((row, i) => {
-        // Validación básica
+
         if (!row || !row[1]) return null;
-        
+
         const baseObj = { rowIndex: i + 2 }; 
 
         // --- PRODUCTOS ---
@@ -90,20 +79,22 @@ export async function GET(request: Request) {
         }
 
         // --- VENTAS ---
-        if (tab === 'Ventas' || tab === 'VENTAS') {
+        if (tab === 'Ventas') {
           return { ...baseObj, date: row[0], client: row[1], total: row[2], details: row[3] };
         }
 
-        // --- CLIENTES REGISTRADOS (NUEVO ARCHIVO) ---
-        // Estructura esperada en el NUEVO Excel: A:Email, B:Password, C:Nombre
+         // --- CLIENTES REGISTRADOS (NUEVO) ---
+        // Columnas Actualizadas: A=Fecha, B=Email, C=Password, D=Nombre
         if (tab === 'Clientes Registrados') {
            return {
              ...baseObj,
-             Email: row[0],
-             Password: row[1],
-             Nombre: row[2]
+             Fecha: row[0],    // Columna A
+             Email: row[1],    // Columna B
+             Password: row[2], // Columna C
+             Nombre: row[3]    // Columna D
            };
         }
+
 
         return null;
     }).filter(item => item !== null);
@@ -118,21 +109,19 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { tab: rawTab, rowIndex, data } = body; 
+    const { tab, rowIndex, data } = body; 
     
-    const tab = normalizeTabName(rawTab);
-
-    // Pasamos 'tab' para saber qué ID de hoja usar
+    // Pasamos el tab para elegir el archivo correcto
     const { sheets, spreadsheetId } = getSheetsParams(tab);
 
     // Definimos hasta qué columna escribir según la pestaña
     let endCol = 'H'; 
     if (tab === 'Productos' || tab === 'Servicios') endCol = 'G';
-    if (tab === 'Clientes Registrados') endCol = 'C';
+    if (tab === 'Clientes Registrados') endCol = 'C'; // Solo usa A, B, C
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `'${tab}'!A${rowIndex}:${endCol}${rowIndex}`, 
+      range: `'${tab}'!A${rowIndex}:${endCol}${rowIndex}`, // Comillas simples agregadas
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [data] },
     });
@@ -147,16 +136,14 @@ export async function PUT(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tab: rawTab, data } = body; 
+    const { tab, data } = body; 
     
-    const tab = normalizeTabName(rawTab);
-    
-    // Pasamos 'tab' para saber qué ID de hoja usar
+    // Pasamos el tab para elegir el archivo correcto
     const { sheets, spreadsheetId } = getSheetsParams(tab);
     
     await sheets.spreadsheets.values.append({
       spreadsheetId, 
-      range: `'${tab}'!A1`, 
+      range: `'${tab}'!A1`, // Comillas simples agregadas
       valueInputOption: 'USER_ENTERED', 
       requestBody: { values: [data] },
     });
