@@ -1109,7 +1109,7 @@ export default function BronzerFullPlatform() {
               transition={{ duration: 0.8, delay: showSplash ? 3.8 : 0.2}} 
             >
               <span className="text-[#96765A] text-xs tracking-[0.4em] uppercase font-bold mb-4 block">Medical Aesthetic</span>
-              <h1 className={`${cinzel.className} text-4xl md:text-5xl lg:text-7xl leading-[1.1] mb-6 text-[#191919] drop-shadow-sm`}>Centro <br/> Estético y <span className="italic text-[#6D6D6D] font-serif">Spa.</span></h1>
+              <h1 className={`${cinzel.className} text-4xl md:text-5xl lg:text-7xl leading-[1.1] mb-6 text-[#191919] drop-shadow-sm`}>Centro <br/> Estético y <span  className="italic text-[#6D6D6D] font-serif"> <br/> Spa.</span></h1>
               <p className="text-[#191919] font-medium leading-relaxed max-w-md mb-8 md:mb-10 text-sm md:text-base">Elevamos el estándar de la belleza. Tecnología de vanguardia en un ambiente de calma absoluta.</p>
               
               <button 
