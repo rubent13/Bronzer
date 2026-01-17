@@ -661,13 +661,14 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
           </motion.div>
         </AnimatePresence>
 
-        {/* CONTROLES */}
-        <div className="absolute bottom-4 md:bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-8 z-30">
-        <button onClick={prevSlide} className="p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowLeft size={18}/></button>
+       {/* CONTROLES */}
+
+        <div className="absolute bottom-0 md:bottom 5 left-1/2 -translate-x-1/2 flex items-center gap-6 md:gap-8 z-30">
+            <button onClick={prevSlide} className="p-2 md:p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowLeft size={16}/></button>
             {/* PUNTOS DE NAVEGACIÓN */}
             <div className="flex gap-2">
               {products.map((_, idx) => (
-                <div 
+                <div  
                   key={idx} 
                   onClick={() => { setDirection(idx > currentIndex ? 1 : -1); setCurrentIndex(idx); }}
                   className={`h-1 cursor-pointer transition-all duration-300 rounded-full ${idx === currentIndex ? 'w-6 md:w-8 bg-[#191919]' : 'w-2 bg-[#191919]/30'}`}
