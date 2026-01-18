@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-// Nota: No importamos Image de next/image para usar img nativa y evitar bloqueos
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Calendar, Users, ShoppingBag, Sparkles, 
@@ -9,7 +8,7 @@ import {
   TrendingUp, DollarSign, Clock, Save, Phone, FileText, RefreshCw, Tag,
   Download, Loader2, Menu, X, Bell, ChevronRight, BarChart3, Home,
   Gift, Palette, Image as ImageIcon, Send, Mail as MailIcon, CheckSquare, Square,
-  Megaphone, CreditCard // Nuevos iconos
+  Megaphone, CreditCard
 } from 'lucide-react';
 import { Cinzel, Montserrat } from 'next/font/google';
 
@@ -52,7 +51,7 @@ export default function AdminPanel() {
     text: "Envíos Gratis en compras mayores a $50 ✨",
     bgColor: "#96765A",
     textColor: "#FFFFFF",
-    animation: "marquee" // 'none', 'marquee', 'pulse'
+    animation: "marquee" 
   });
   
   // --- MODALES ---
@@ -60,8 +59,6 @@ export default function AdminPanel() {
   const [editSpecialist, setEditSpecialist] = useState<any>(null); 
   const [productModal, setProductModal] = useState<any>(null); 
   const [serviceModal, setServiceModal] = useState<any>(null); 
-  
-  // Modal Marketing Actualizado
   const [marketingModal, setMarketingModal] = useState<any>(null); 
   
   const [isCreating, setIsCreating] = useState(false);
@@ -316,7 +313,6 @@ export default function AdminPanel() {
 
   // --- FUNCIÓN ENVIAR MARKETING / BANNER ---
   const handleSaveBanner = () => {
-    // Aquí iría la lógica para guardar en DB. Por ahora simulamos.
     alert("✅ Banner actualizado exitosamente en la tienda.");
   };
 
@@ -325,19 +321,7 @@ export default function AdminPanel() {
           alert("⚠️ Por favor selecciona al menos un cliente.");
           return;
       }
-
-      // Datos del Cupón/Regalo
-      const couponData = {
-          title: marketingModal.title,
-          type: marketingModal.couponType || 'discount', // 'discount', 'giftcard', 'gift'
-          target: marketingModal.couponTarget || 'all', // 'all', 'boutique', 'nutrition', 'service_id'
-          singleUse: true, // Siempre true según requerimiento
-          clients: marketingModal.selectedEmails
-      };
-
-      // Aquí guardarías en la BD de Cupones/Notificaciones
-      console.log("Enviando Cupón:", couponData);
-
+      
       const today = new Date().toLocaleDateString('es-VE');
       const updatedClients = clients.map(c => {
           if (marketingModal.selectedEmails.includes(c.Email)) {
@@ -440,6 +424,8 @@ export default function AdminPanel() {
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-10 pb-24 md:pb-10 scroll-smooth">
+            
+            {/* VISTA: OVERVIEW */}
             {activeTab === 'overview' && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -448,6 +434,45 @@ export default function AdminPanel() {
                          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100"><div className="flex items-center gap-2 mb-2 text-purple-600"><ShoppingBag size={16}/> <span className="text-[10px] font-bold uppercase">Ventas</span></div><p className={`${cinzel.className} text-xl md:text-3xl`}>{salesStats.orders}</p></div>
                          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100"><div className="flex items-center gap-2 mb-2 text-[#D4AF37]"><Users size={16}/> <span className="text-[10px] font-bold uppercase">Clientes</span></div><p className={`${cinzel.className} text-xl md:text-3xl`}>{clients.length}</p></div>
                     </div>
+                    {/* Gráfica */}
+                    <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
+                        <div className="flex justify-between items-center mb-8"><h3 className={`${cinzel.className} text-lg md:text-xl flex items-center gap-2`}><BarChart3 size={20} className="text-[#D4AF37]"/> Rendimiento</h3><span className="text-xs bg-gray-50 px-3 py-1 rounded-full text-gray-500">2025</span></div>
+                        <div className="h-40 md:h-64 flex items-end justify-between gap-2 md:gap-4 px-2">
+                             {monthlySales.map((amount, i) => {
+                                 const max = Math.max(...monthlySales, 100);
+                                 const h = Math.round((amount / max) * 100);
+                                 const isActive = activeChartIndex === i;
+                                 return (
+                                 <div key={i} className="w-full flex flex-col justify-end group cursor-pointer relative" onClick={() => setActiveChartIndex(isActive ? null : i)} onMouseEnter={() => setActiveChartIndex(i)} onMouseLeave={() => setActiveChartIndex(null)}>
+                                     {isActive && <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap">${amount}</div>}
+                                     <div className={`w-full bg-gradient-to-t from-gray-100 to-gray-200 rounded-t-lg transition-all duration-300 ${isActive ? 'from-[#D4AF37] to-yellow-300' : ''}`} style={{ height: `${h || 5}%` }}></div>
+                                 </div>
+                             )})}
+                        </div>
+                        <div className="flex justify-between mt-4 text-[8px] md:text-[10px] text-gray-400 font-bold uppercase border-t border-gray-100 pt-4">{['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map(m => <span key={m}>{m}</span>)}</div>
+                    </div>
+                </div>
+            )}
+
+            {/* VISTA: RESERVAS */}
+            {activeTab === 'bookings' && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex justify-between items-center mb-2"><h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Próximas Citas</h3><span className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-500">{reservations.length}</span></div>
+                    {reservations.map((res) => (
+                        <div key={res.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 group">
+                            <div className="flex-1">
+                                <div className="flex justify-between md:justify-start items-center gap-4 mb-2"><h4 className="font-bold text-base text-[#0a0a0a]">{res.client}</h4><span className="md:hidden text-[9px] bg-green-50 text-green-600 px-2 py-1 rounded-full font-bold uppercase border border-green-100">Confirmada</span></div>
+                                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                                    <span className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded"><Calendar size={12} className="text-[#D4AF37]"/> {res.date}</span>
+                                    <span className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded"><Clock size={12} className="text-[#D4AF37]"/> {res.time}</span>
+                                </div>
+                                <p className="text-xs text-[#D4AF37] font-bold mt-3 uppercase tracking-wide flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full"></span> {res.service}</p>
+                            </div>
+                            <div className="flex gap-2 border-t pt-3 md:border-t-0 md:pt-0 mt-1 md:mt-0">
+                                <button onClick={() => deleteBooking(res.id)} className="px-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100"><Trash2 size={16}/></button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
 
@@ -456,7 +481,6 @@ export default function AdminPanel() {
                 <div className="animate-in fade-in zoom-in duration-300 max-w-2xl mx-auto">
                     <h2 className={`${cinzel.className} text-2xl text-[#191919] mb-6`}>Configurar Banner Superior</h2>
                     
-                    {/* Previsualización */}
                     <div className="mb-8 p-4 border border-gray-100 rounded-2xl bg-gray-50">
                         <p className="text-xs text-gray-400 mb-2 uppercase tracking-wider">Vista Previa:</p>
                         <div className="w-full py-2 overflow-hidden flex items-center justify-center text-xs font-medium tracking-widest uppercase shadow-sm rounded" style={{ backgroundColor: bannerConfig.bgColor, color: bannerConfig.textColor }}>
@@ -550,32 +574,71 @@ export default function AdminPanel() {
                 </div>
             )}
 
-            {/* VISTA: RESERVAS (IGUAL QUE ANTES) */}
-            {activeTab === 'bookings' && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="flex justify-between items-center mb-2"><h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Próximas Citas</h3><span className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-500">{reservations.length}</span></div>
-                    {reservations.map((res) => (
-                        <div key={res.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 group">
-                            <div className="flex-1">
-                                <div className="flex justify-between md:justify-start items-center gap-4 mb-2"><h4 className="font-bold text-base text-[#0a0a0a]">{res.client}</h4><span className="md:hidden text-[9px] bg-green-50 text-green-600 px-2 py-1 rounded-full font-bold uppercase border border-green-100">Confirmada</span></div>
-                                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                                    <span className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded"><Calendar size={12} className="text-[#D4AF37]"/> {res.date}</span>
-                                    <span className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded"><Clock size={12} className="text-[#D4AF37]"/> {res.time}</span>
+            {/* VISTA: PRODUCTOS */}
+            {activeTab === 'products' && (
+                <div className="animate-in fade-in zoom-in duration-300">
+                    <button onClick={openNewProductModal} className="w-full md:w-auto bg-black text-white px-6 py-4 rounded-xl text-xs uppercase tracking-widest mb-6 flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] transition-transform"><Plus size={16}/> Agregar Producto</button>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                        {products.map((prod, i) => (
+                            <div key={i} onClick={() => openEditProductModal(prod)} className="bg-white p-2.5 md:p-4 rounded-2xl border border-gray-100 shadow-sm relative active:scale-95 transition-transform cursor-pointer">
+                                <div className="aspect-square bg-gray-50 rounded-xl mb-3 overflow-hidden relative">
+                                    {processGoogleImage(prod.img) ? <img src={processGoogleImage(prod.img)||''} className="w-full h-full object-cover"/> : <div className="h-full flex items-center justify-center text-gray-300"><ShoppingBag/></div>}
                                 </div>
-                                <p className="text-xs text-[#D4AF37] font-bold mt-3 uppercase tracking-wide flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full"></span> {res.service}</p>
+                                <h4 className="font-bold text-xs md:text-sm truncate text-gray-800">{prod.name}</h4>
+                                <div className="flex justify-between items-center mt-2">
+                                    <p className="text-[#D4AF37] text-xs font-bold">${prod.price}</p>
+                                    <p className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded">x{prod.stock}</p>
+                                </div>
                             </div>
-                            <div className="flex gap-2 border-t pt-3 md:border-t-0 md:pt-0 mt-1 md:mt-0">
-                                <button onClick={() => deleteBooking(res.id)} className="px-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100"><Trash2 size={16}/></button>
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             )}
-            
-            {/* ... OTRAS VISTAS (PRODUCTOS, SERVICIOS, EQUIPO) SE MANTIENEN ... */}
-            {(activeTab === 'products' || activeTab === 'services' || activeTab === 'team') && (
-                <div className="flex items-center justify-center h-full text-gray-400">
-                    <p>Gestionar desde las pestañas correspondientes (Código mantenido)</p>
+
+            {/* VISTA: SERVICIOS */}
+            {activeTab === 'services' && (
+                <div className="animate-in fade-in zoom-in duration-300">
+                    <button onClick={openNewServiceModal} className="w-full md:w-auto bg-black text-white px-6 py-4 rounded-xl text-xs uppercase tracking-widest mb-6 flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] transition-transform"><Plus size={16}/> Agregar Servicio</button>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+                        {services.map((serv, i) => (
+                            <div key={i} onClick={() => openEditServiceModal(serv)} className="bg-white p-3 md:p-5 rounded-2xl border border-gray-100 shadow-sm relative active:scale-95 transition-transform cursor-pointer flex flex-col justify-between h-full">
+                                <div>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="w-8 h-8 md:w-10 md:h-10 bg-gray-50 rounded-full flex items-center justify-center text-[#D4AF37] shrink-0">
+                                            {processGoogleImage(serv.img) ? <img src={processGoogleImage(serv.img)||''} className="w-full h-full object-cover rounded-full"/> : <Sparkles size={14}/>}
+                                        </div>
+                                        <div className="absolute top-3 right-3 text-gray-300"><Edit2 size={12}/></div>
+                                    </div>
+                                    <h4 className="font-bold text-xs md:text-sm text-gray-800 leading-tight mb-1">{serv.name}</h4>
+                                </div>
+                                <div className="flex items-center justify-between border-t border-gray-50 pt-2 mt-2">
+                                    <span className="text-[#D4AF37] font-bold text-sm">${serv.price}</span>
+                                    <span className="text-[9px] bg-gray-50 px-2 py-1 rounded text-gray-500">{serv.duration}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* VISTA: EQUIPO */}
+            {activeTab === 'team' && (
+                <div className="animate-in fade-in zoom-in duration-300">
+                    <div className="flex justify-end mb-4"><button onClick={() => window.open(`https://docs.google.com/spreadsheets/d/${process.env.NEXT_PUBLIC_SHEET_ID || ''}`, '_blank')} className="text-xs text-gray-400 underline flex items-center gap-1 hover:text-black">Gestionar en Sheets <ChevronRight size={12}/></button></div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {team.map((t, i) => (
+                            <div key={i} onClick={() => setEditSpecialist(t)} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 cursor-pointer active:bg-gray-50">
+                                <div className="w-14 h-14 rounded-full bg-gray-50 overflow-hidden shrink-0 border-2 border-white shadow-md">
+                                    {processGoogleImage(t.img) ? <img src={processGoogleImage(t.img)||''} className="w-full h-full object-cover"/> : <Users size={20} className="m-auto text-gray-300"/>}
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-sm text-gray-800">{t.name}</h4>
+                                    <p className="text-[10px] text-[#D4AF37] uppercase font-bold tracking-wider">{t.role}</p>
+                                </div>
+                                <div className="ml-auto text-gray-300"><Edit2 size={16}/></div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
@@ -591,7 +654,7 @@ export default function AdminPanel() {
                             {marketingModal && 'Diseñador de Promociones'}
                             {!marketingModal && 'Gestión'}
                         </h3>
-                        <button onClick={() => { setMarketingModal(null); setEditBooking(null); }} className="bg-gray-50 p-2 rounded-full hover:bg-gray-200 transition-colors"><X size={18}/></button>
+                        <button onClick={() => { setMarketingModal(null); setEditBooking(null); setProductModal(null); setServiceModal(null); setEditSpecialist(null); }} className="bg-gray-50 p-2 rounded-full hover:bg-gray-200 transition-colors"><X size={18}/></button>
                     </div>
                     
                     <div className="p-6 overflow-y-auto space-y-5">
@@ -703,6 +766,66 @@ export default function AdminPanel() {
                                     </button>
                                 </div>
                             </div>
+                        )}
+
+                        {productModal && (
+                            <>
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-xl font-medium outline-none border border-transparent focus:border-[#D4AF37] transition-all" value={productModal.name} onChange={e => setProductModal({...productModal, name: e.target.value})} /></div>
+                                <div className="flex gap-4">
+                                    <div className="flex-1 space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Precio</label><input type="number" className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={productModal.price} onChange={e => setProductModal({...productModal, price: e.target.value})} /></div>
+                                    <div className="flex-1 space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Stock</label><input type="number" className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={productModal.stock} onChange={e => setProductModal({...productModal, stock: e.target.value})} /></div>
+                                </div>
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Descripción</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={productModal.description} onChange={e => setProductModal({...productModal, description: e.target.value})} /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Promoción</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={productModal.promotion} onChange={e => setProductModal({...productModal, promotion: e.target.value})} /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Link Imagen</label><input className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" value={productModal.img} onChange={e => setProductModal({...productModal, img: e.target.value})} /></div>
+                                <button onClick={saveProduct} disabled={isProcessing} className="w-full bg-black text-white py-4 rounded-xl uppercase tracking-widest font-bold text-xs mt-4 hover:bg-[#D4AF37] transition-colors">{isProcessing ? 'Guardando...' : 'Guardar Cambios'}</button>
+                            </>
+                        )}
+                        
+                        {serviceModal && (
+                             <>
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-xl font-medium outline-none" value={serviceModal.name} onChange={e => setServiceModal({...serviceModal, name: e.target.value})} /></div>
+                                <div className="flex gap-4">
+                                    <div className="flex-1 space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Precio</label><input type="number" className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={serviceModal.price} onChange={e => setServiceModal({...serviceModal, price: e.target.value})} /></div>
+                                    <div className="flex-1 space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Duración</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={serviceModal.duration} onChange={e => setServiceModal({...serviceModal, duration: e.target.value})} /></div>
+                                </div>
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Categoría</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={serviceModal.category} onChange={e => setServiceModal({...serviceModal, category: e.target.value})} /></div>
+                                
+                                {/* SELECTOR DE ESPECIALISTAS */}
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Especialistas Asignados</label>
+                                    <div className="flex gap-2">
+                                        <input className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" value={serviceModal.specialists || ''} onChange={e => setServiceModal({...serviceModal, specialists: e.target.value})} placeholder="Ej: Dra. Elena, Lic. Sofia" />
+                                        <select className="p-3 bg-gray-100 rounded-xl text-xs outline-none w-1/3" onChange={(e) => { if(e.target.value) setServiceModal({...serviceModal, specialists: serviceModal.specialists ? `${serviceModal.specialists}, ${e.target.value}` : e.target.value}); }}>
+                                            <option value="">+ Add</option>
+                                            {team.map((t:any) => <option key={t.id} value={t.name}>{t.name}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Link Imagen</label><input className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" value={serviceModal.img} onChange={e => setServiceModal({...serviceModal, img: e.target.value})} /></div>
+                                <button onClick={saveService} disabled={isProcessing} className="w-full bg-black text-white py-4 rounded-xl uppercase tracking-widest font-bold text-xs mt-4">Guardar</button>
+                            </>
+                        )}
+
+                        {editBooking && (
+                            <div className="space-y-4">
+                                <div><label className="text-[10px] font-bold text-gray-400 uppercase">Fecha</label><input type="date" className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editBooking.date} onChange={e => setEditBooking({...editBooking, date: e.target.value})} /></div>
+                                <div><label className="text-[10px] font-bold text-gray-400 uppercase">Hora</label><input type="time" className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editBooking.time} onChange={e => setEditBooking({...editBooking, time: e.target.value})} /></div>
+                                <button onClick={saveBookingEdit} disabled={isProcessing} className="w-full bg-black text-white py-4 rounded-xl uppercase tracking-widest font-bold text-xs mt-4">Confirmar Reprogramación</button>
+                            </div>
+                        )}
+
+                        {editSpecialist && (
+                             <>
+                                <div className="flex justify-center mb-4"><div className="w-20 h-20 rounded-full bg-gray-100 overflow-hidden border-2 border-gray-100"><img src={processGoogleImage(editSpecialist.img)||''} className="w-full h-full object-cover"/></div></div>
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editSpecialist.name} onChange={e => setEditSpecialist({...editSpecialist, name: e.target.value})} /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Rol</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editSpecialist.role} onChange={e => setEditSpecialist({...editSpecialist, role: e.target.value})} /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Horario</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editSpecialist.schedule} onChange={e => setEditSpecialist({...editSpecialist, schedule: e.target.value})} /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Servicios (Separados por coma)</label><textarea className="w-full p-3 bg-gray-50 rounded-xl outline-none h-20 text-xs" value={editSpecialist.services || ''} onChange={e => setEditSpecialist({...editSpecialist, services: e.target.value})} placeholder="Maderoterapia, Facial..." /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Link Foto</label><input className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" value={editSpecialist.img} onChange={e => setEditSpecialist({...editSpecialist, img: e.target.value})} /></div>
+                                <button onClick={saveSpecialistEdit} disabled={isProcessing} className="w-full bg-black text-white py-4 rounded-xl uppercase tracking-widest font-bold text-xs mt-4">Guardar Perfil</button>
+                            </>
                         )}
                     </div>
                 </motion.div>
