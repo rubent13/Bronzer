@@ -260,6 +260,7 @@ interface BookingModalProps {
   isSubmitting: boolean;
   saveToDatabase: (extraData: Record<string, unknown>) => void;
   specialistsList: Array<any>;
+  existingBookings: any[]; // <-- NUEVO: Recibe las citas existentes
 }
 
 const BookingModal: React.FC<BookingModalProps> = ({
@@ -269,7 +270,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
   selectedDate, setSelectedDate,
   selectedTime, setSelectedTime,
   clientData, setClientData,
-  isSubmitting, saveToDatabase, specialistsList
+  isSubmitting, saveToDatabase, specialistsList,
+  existingBookings // <-- NUEVO
 }) => {
 
   const [paymentMethod, setPaymentMethod] = useState('pago_movil'); 
@@ -318,7 +320,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
             <h2 className={`${cinzel.className} text-xl md:text-2xl mb-2 text-[#191919]`}>Selecciona tu Experto</h2>
             <p className="text-gray-500 text-sm mb-6">Elige al profesional para tu tratamiento.</p>
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 gap-3 md:gap-4">
               
               {filteredSpecialists.length > 0 ? (
                   filteredSpecialists.map((spec) => {
@@ -362,9 +364,35 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                   <p className="text-xs uppercase tracking-widest mb-3 text-[#191919]">Horas Disponibles</p>
                   <div className="grid grid-cols-3 gap-3">
-                    {['09:00', '11:00', '14:30', '16:00', '17:30'].map(time => (
-                      <button key={time} onClick={() => { setSelectedTime(time); setStep(3); }} className={`py-2 text-sm ${GLASS_STYLE.replace('py-3', '').replace('px-8','').replace('tracking-widest','')} hover:bg-white/20`}>{time}</button>
-                    ))}
+                    {['09:00', '11:00', '14:30', '16:00', '17:30'].map(time => {
+                      // --- NUEVO: Verificar si el especialista ya tiene cita en esta fecha y hora ---
+                      const isBooked = existingBookings.some((booking: any) => 
+                        booking.specialist === selectedSpecialist?.name &&
+                        booking.date === selectedDate &&
+                        booking.time === time
+                      );
+                      
+                      return (
+                        <button 
+                          key={time} 
+                          onClick={() => { 
+                            if (!isBooked) {
+                              setSelectedTime(time); 
+                              setStep(3); 
+                            }
+                          }} 
+                          disabled={isBooked} // Deshabilitar si está ocupado
+                          className={`py-2 text-sm transition-all ${
+                            isBooked 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' // Estilo ocupado
+                            : GLASS_STYLE.replace('py-3', '').replace('px-8','').replace('tracking-widest','') + ' hover:bg-white/20' // Estilo normal
+                          }`}
+                        >
+                          {time}
+                          {isBooked && <span className="block text-[8px] mt-1">OCUPADO</span>}
+                        </button>
+                      )
+                    })}
                   </div>
                 </motion.div>
               )}
@@ -806,10 +834,6 @@ const ClientNewsModal = ({ user, onClose }: any) => (
     </motion.div>
 );
 
-// Duplicate ClientAccessModal removed (kept single declaration above)
-
-// Duplicate ClientNewsModal removed (kept single declaration above)
-
 export default function BronzerFullPlatform() {
   const [showSplash, setShowSplash] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
@@ -824,6 +848,9 @@ export default function BronzerFullPlatform() {
   const [specialists, setSpecialists] = useState(INITIAL_SPECIALISTS);
   const [services, setServices] = useState<Service[]>(INITIAL_SERVICES);
   
+  // --- NUEVO: Estado para citas existentes ---
+  const [existingBookings, setExistingBookings] = useState<any[]>([]);
+
   // --- NUEVO: ESTADO PARA MOSTRAR TIENDA COMPLETA ---
   const [showFullShop, setShowFullShop] = useState(false);
 
@@ -850,10 +877,28 @@ export default function BronzerFullPlatform() {
     }
   }, []);
 
+  // --- NUEVO: Función para cargar citas existentes ---
+  const fetchExistingBookings = async () => {
+    try {
+        const response = await fetch('/api/calendar');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data) {
+                setExistingBookings(data.data);
+            }
+        }
+    } catch (error) {
+        console.error("Error cargando citas existentes:", error);
+    }
+  };
+
   useEffect(() => {
     // CARGA DE DATOS REALES (SI EXISTEN)
     const fetchData = async () => {
         try {
+            // Cargar citas existentes
+            await fetchExistingBookings();
+
             const resProd = await fetch('/api/database?tab=Productos');
             const dataProd = await resProd.json();
             if(dataProd.success && dataProd.data.length > 0) setProducts(dataProd.data);
@@ -898,7 +943,13 @@ export default function BronzerFullPlatform() {
       
       if (!response.ok) throw new Error("Error server");
       const data = await response.json();
-      if (data.success) setBookingStep(5); else alert("Error al agendar");
+      if (data.success) {
+        // Recargar las citas después de guardar
+        await fetchExistingBookings();
+        setBookingStep(5); 
+      } else {
+        alert("Error al agendar");
+      }
     } catch (error) { alert("Fallo conexión"); } 
     finally { setIsSubmitting(false); }
   };
@@ -979,7 +1030,7 @@ export default function BronzerFullPlatform() {
                     })}
                 </div>
             </main>
-          
+           
             {/* AQUÍ AGREGAMOS LA PROPIEDAD onCheckout */}
             {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} />}
         </div>
@@ -1210,7 +1261,7 @@ export default function BronzerFullPlatform() {
       </footer>
 
       <AnimatePresence>
-        {bookingOpen && <BookingModal key="modal" onClose={() => setBookingOpen(false)} step={bookingStep} setStep={setBookingStep} selectedSpecialist={selectedSpecialist} setSelectedSpecialist={setSelectedSpecialist} selectedService={selectedService} setSelectedService={setSelectedService} selectedDate={selectedDate} setSelectedDate={setSelectedDate} selectedTime={selectedTime} setSelectedTime={setSelectedTime} clientData={clientData} setClientData={setClientData} isSubmitting={isSubmitting} saveToDatabase={saveToDatabase} specialistsList={specialists} />}
+        {bookingOpen && <BookingModal key="modal" onClose={() => setBookingOpen(false)} step={bookingStep} setStep={setBookingStep} selectedSpecialist={selectedSpecialist} setSelectedSpecialist={setSelectedSpecialist} selectedService={selectedService} setSelectedService={setSelectedService} selectedDate={selectedDate} setSelectedDate={setSelectedDate} selectedTime={selectedTime} setSelectedTime={setSelectedTime} clientData={clientData} setClientData={setClientData} isSubmitting={isSubmitting} saveToDatabase={saveToDatabase} specialistsList={specialists} existingBookings={existingBookings} />}
         {cartOpen && <CartDrawer key="drawer" onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} />}
       </AnimatePresence>
 
