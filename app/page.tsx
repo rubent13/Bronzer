@@ -260,6 +260,7 @@ interface BookingModalProps {
   isSubmitting: boolean;
   saveToDatabase: (extraData: Record<string, unknown>) => void;
   specialistsList: Array<any>;
+  existingBookings: any[]; // <--- ¡AGREGA ESTA LÍNEA!
 }
 
 const BookingModal: React.FC<BookingModalProps> = ({
