@@ -12,11 +12,11 @@ import {
   Gift, Palette, Image as ImageIcon, Send, Mail as MailIcon, 
   CheckSquare, Square, Megaphone, CreditCard, Percent, Target
 } from 'lucide-react';
-import { Cinzel, Montserrat } from 'next/font/google';
 
-// --- FUENTES ---
-const cinzel = Cinzel({ subsets: ['latin'], weight: ['400', '600', '700'] });
-const montserrat = Montserrat({ subsets: ['latin'], weight: ['300', '400', '500', '600'] });
+// --- FUENTES (CORRECCIÓN: Usamos CSS estándar en lugar de next/font) ---
+// Simulamos los objetos de fuente para mantener la estructura del código
+const cinzel = { className: 'font-cinzel' };
+const montserrat = { className: 'font-montserrat' };
 
 // --- DATOS INICIALES (VACÍOS) ---
 const INITIAL_RESERVATIONS: any[] = [];
@@ -147,17 +147,18 @@ export default function AdminPanel() {
     setIsLoadingGoogle(true);
     try {
       // Agregamos fetch de Clientes y Configuración si es necesario
-      const [resCal, resProd, resTeam, resServ, resSales, resClients] = await Promise.all([
+      const [resCal, resProd, resTeam, resServ, resSales, resClients, resConfig] = await Promise.all([
         fetch('/api/calendar'),
         fetch('/api/database?tab=Productos'),
         fetch('/api/database?tab=ESPECIALISTAS'),
         fetch('/api/database?tab=Servicios'),
         fetch('/api/database?tab=Ventas'),
-        fetch('/api/database?tab=Clientes Registrados')
+        fetch('/api/database?tab=Clientes Registrados'),
+        fetch('/api/config')
       ]);
 
-      const [dataCal, dataProd, dataTeam, dataServ, dataSales, dataClients] = await Promise.all([
-        resCal.json(), resProd.json(), resTeam.json(), resServ.json(), resSales.json(), resClients.json()
+      const [dataCal, dataProd, dataTeam, dataServ, dataSales, dataClients, dataConfig] = await Promise.all([
+        resCal.json(), resProd.json(), resTeam.json(), resServ.json(), resSales.json(), resClients.json(), resConfig.json()
       ]);
 
       if (dataCal.success) {
@@ -179,6 +180,11 @@ export default function AdminPanel() {
       if (dataTeam.success) setTeam(dataTeam.data);
       if (dataServ.success) setServices(dataServ.data);
       
+      // Actualizar Banner Config desde Sheets
+      if (dataConfig.success && dataConfig.data) {
+          setBannerConfig(dataConfig.data);
+      }
+
       // Guardar Clientes
       if (dataClients.success) {
           // Simulamos lastSent porque no viene de la DB aun, o lo agregamos
@@ -407,6 +413,11 @@ export default function AdminPanel() {
   if (!isAuthenticated) {
     return (
       <div className={`h-screen w-full bg-[#050505] flex items-center justify-center ${montserrat.className}`}>
+        <style>{`
+            @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap');
+            .font-cinzel { font-family: 'Cinzel', serif; }
+            .font-montserrat { font-family: 'Montserrat', sans-serif; }
+        `}</style>
         <div className="bg-white/10 backdrop-blur-md p-10 w-full max-w-sm text-center shadow-2xl border border-white/20 rounded-3xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent"></div>
           <h1 className={`${cinzel.className} text-4xl mb-2 text-[#D4AF37]`}>BRONZER</h1>
@@ -435,6 +446,14 @@ export default function AdminPanel() {
 
   return (
     <div className={`h-screen flex bg-slate-50 overflow-hidden ${montserrat.className}`}>
+      <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap');
+          .font-cinzel { font-family: 'Cinzel', serif; }
+          .font-montserrat { font-family: 'Montserrat', sans-serif; }
+          .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+      `}</style>
+
       {!isAppInstalled && (deferredPrompt || isMobile) && (
         <motion.button initial={{ y: 100 }} animate={{ y: 0 }} transition={{ delay: 1 }} onClick={handleInstallClick} className="fixed bottom-24 right-6 z-[60] bg-[#D4AF37] text-black p-4 rounded-full shadow-lg md:hidden"><Download size={24}/></motion.button>
       )}
