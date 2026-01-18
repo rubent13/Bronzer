@@ -48,7 +48,6 @@ export async function GET(request: Request) {
     }
 
     // 3. Manejo de Espacios: Si tiene espacios, debe ir entre comillas simples 'Nombre Hoja'
-    // IMPORTANTE: Siempre usamos comillas simples para ser seguros con nombres complejos
     const safeTabName = `'${tabName.replace(/'/g, '')}'`; 
 
     console.log(`📡 Intentando leer: ${spreadsheetId.substring(0, 5)}... | Pestaña: ${safeTabName}`);
@@ -107,7 +106,6 @@ export async function GET(request: Request) {
                 });
             }
         } catch (metaError) {
-            // Si falla la metadata, probablemente el ID es incorrecto
             return NextResponse.json({ 
                 success: false, 
                 error: `Error Crítico: No se pudo conectar a la hoja con ID "${spreadsheetId}". Verifica que el ID sea correcto en tu archivo .env` 
@@ -115,7 +113,6 @@ export async function GET(request: Request) {
         }
     }
 
-    // Devolvemos el error detallado para ver qué pasa en el frontend
     return NextResponse.json({ success: false, error: error.message });
   }
 }
@@ -131,7 +128,21 @@ export async function POST(request: Request) {
     if (!spreadsheetId) throw new Error("Falta Spreadsheet ID");
 
     // Manejo seguro de nombre de pestaña
-    const safeTabName = `'${tab.replace(/'/g, '')}'`;
+    const cleanTab = tab.replace(/'/g, '');
+    const safeTabName = `'${cleanTab}'`;
+
+    // --- LÓGICA ESPECIAL PARA CONFIG ---
+    // Si guardamos banner, limpiamos primero para evitar acumulación
+    if (cleanTab === 'CONFIG') {
+        try {
+            await sheets.spreadsheets.values.clear({
+                spreadsheetId,
+                range: `${safeTabName}!A2:Z20`, // Borra contenido datos, mantiene headers
+            });
+        } catch (e) {
+            console.warn("⚠️ No se pudo limpiar CONFIG (puede estar vacío):", e);
+        }
+    }
 
     await sheets.spreadsheets.values.append({
       spreadsheetId,
@@ -176,4 +187,54 @@ export async function PUT(request: Request) {
     console.error('❌ PUT Error:', error.message);
     return NextResponse.json({ success: false, error: error.message });
   }
+}
+
+// --- FUNCIÓN DELETE (PARA BORRAR CUPONES O FILAS) ---
+export async function DELETE(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const tab = searchParams.get('tab');
+        // 'index' es el rowIndex de Excel (ej: 2, 3, 4...)
+        const rowIndex = Number(searchParams.get('index')); 
+
+        if (!tab || isNaN(rowIndex)) return NextResponse.json({ success: false, error: 'Faltan parámetros (tab, index)' });
+
+        const sheets = await getSheets();
+        const spreadsheetId = process.env.NEXT_PUBLIC_SHEET_ID || process.env.GOOGLE_SHEET_ID;
+        
+        // 1. Obtener el sheetId (necesario para borrar filas enteras)
+        const metadata = await sheets.spreadsheets.get({ spreadsheetId });
+        const cleanTabName = tab.replace(/'/g, ''); 
+        const sheet = metadata.data.sheets?.find(s => s.properties?.title === cleanTabName);
+        
+        if (!sheet?.properties?.sheetId && sheet?.properties?.sheetId !== 0) {
+             return NextResponse.json({ success: false, error: `Hoja '${cleanTabName}' no encontrada para borrar.` });
+        }
+
+        // 2. Calcular índices API (0-based)
+        // Excel Row 1 = Index 0.
+        // Si rowIndex es 2 (primera fila de datos), startIndex debe ser 1.
+        const startIndex = rowIndex - 1; 
+
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+                requests: [{
+                    deleteDimension: {
+                        range: {
+                            sheetId: sheet.properties.sheetId,
+                            dimension: 'ROWS',
+                            startIndex: startIndex,
+                            endIndex: startIndex + 1
+                        }
+                    }
+                }]
+            }
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error('❌ DELETE Error:', error.message);
+        return NextResponse.json({ success: false, error: error.message });
+    }
 }
