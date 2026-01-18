@@ -7,7 +7,8 @@ import {
   LayoutDashboard, Calendar, Users, ShoppingBag, Sparkles, 
   LogOut, Plus, Trash2, Edit2, Search, CheckCircle, XCircle, 
   TrendingUp, DollarSign, Clock, Save, Phone, FileText, RefreshCw, Tag,
-  Download, Loader2, Menu, X, Bell, ChevronRight, BarChart3, Home 
+  Download, Loader2, Menu, X, Bell, ChevronRight, BarChart3, Home,
+  Gift, Palette, Image as ImageIcon, Send, Mail as MailIcon
 } from 'lucide-react';
 import { Cinzel, Montserrat } from 'next/font/google';
 
@@ -20,6 +21,7 @@ const INITIAL_RESERVATIONS: any[] = [];
 const INITIAL_PRODUCTS: any[] = [];
 const INITIAL_TEAM: any[] = [];
 const INITIAL_SERVICES: any[] = [];
+const INITIAL_CLIENTS: any[] = [];
 
 export default function AdminPanel() {
   // --- ESTADOS PRINCIPALES ---
@@ -33,11 +35,10 @@ export default function AdminPanel() {
   const [products, setProducts] = useState<any[]>(INITIAL_PRODUCTS);
   const [team, setTeam] = useState<any[]>(INITIAL_TEAM);
   const [services, setServices] = useState<any[]>(INITIAL_SERVICES); 
+  const [clients, setClients] = useState<any[]>(INITIAL_CLIENTS); // Nuevo estado para clientes
   
   // Estado Ventas
   const [salesStats, setSalesStats] = useState({ total: 0, orders: 0 });
-  
-  // Estado para las ventas mensuales
   const [monthlySales, setMonthlySales] = useState<number[]>(new Array(12).fill(0));
   const [activeChartIndex, setActiveChartIndex] = useState<number | null>(null);
 
@@ -47,12 +48,10 @@ export default function AdminPanel() {
   // --- MODALES ---
   const [editBooking, setEditBooking] = useState<any>(null); 
   const [editSpecialist, setEditSpecialist] = useState<any>(null); 
-  
-  // Modales Productos y Servicios
   const [productModal, setProductModal] = useState<any>(null); 
   const [serviceModal, setServiceModal] = useState<any>(null); 
+  const [marketingModal, setMarketingModal] = useState<any>(null); // Nuevo Modal Marketing
   
-  // Estado genérico para saber si estamos creando o editando
   const [isCreating, setIsCreating] = useState(false);
 
   // --- ESTADOS DE INTERFAZ Y PWA ---
@@ -74,7 +73,6 @@ export default function AdminPanel() {
     if (loginData.user === "admin" && loginData.pass === "bronzer2025") {
       setIsAuthenticated(true);
       setUserName(loginData.user ? (loginData.user.charAt(0).toUpperCase() + loginData.user.slice(1)) : 'Admin');
-      // Activamos la carga de datos
       await fetchAllData();
       setIsDataReady(true); 
     } else {
@@ -134,23 +132,22 @@ export default function AdminPanel() {
   const fetchAllData = async () => {
     setIsLoadingGoogle(true);
     try {
-      const [resCal, resProd, resTeam, resServ, resSales] = await Promise.all([
+      const [resCal, resProd, resTeam, resServ, resSales, resClients] = await Promise.all([
         fetch('/api/calendar'),
         fetch('/api/database?tab=Productos'),
         fetch('/api/database?tab=ESPECIALISTAS'),
         fetch('/api/database?tab=Servicios'),
-        fetch('/api/database?tab=Ventas')
+        fetch('/api/database?tab=Ventas'),
+        fetch('/api/database?tab=Clientes Registrados')
       ]);
 
-      const [dataCal, dataProd, dataTeam, dataServ, dataSales] = await Promise.all([
-        resCal.json(), resProd.json(), resTeam.json(), resServ.json(), resSales.json()
+      const [dataCal, dataProd, dataTeam, dataServ, dataSales, dataClients] = await Promise.all([
+        resCal.json(), resProd.json(), resTeam.json(), resServ.json(), resSales.json(), resClients.json()
       ]);
 
-      // --- CORRECCIÓN AQUÍ: Usamos los campos directos de tu API actualizada ---
       if (dataCal.success) {
         const googleBookings = dataCal.data.map((evt: any) => ({
             id: evt.id,
-            // La API nueva ya devuelve los nombres limpios, no hay que parsear description
             client: evt.client_name || 'Cliente', 
             phone: evt.phone || '---',
             note: evt.note || '',
@@ -166,6 +163,7 @@ export default function AdminPanel() {
       if (dataProd.success) setProducts(dataProd.data);
       if (dataTeam.success) setTeam(dataTeam.data);
       if (dataServ.success) setServices(dataServ.data);
+      if (dataClients.success) setClients(dataClients.data); // Guardar clientes
 
       if (dataSales.success) {
         const salesData = dataSales.data;
@@ -230,12 +228,9 @@ export default function AdminPanel() {
   };
 
   const deleteBooking = async (id: any) => {
-    // Confirmación actualizada
     if(!confirm("¿Eliminar cita de Google Calendar y la Base de Datos?")) return;
-    
     setIsProcessing(true);
     try {
-      // La API /api/calendar DELETE ya está configurada para borrar de ambos sitios
       const res = await fetch(`/api/calendar?id=${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
@@ -300,6 +295,12 @@ export default function AdminPanel() {
     } catch (error) { alert("Error"); } finally { setIsProcessing(false); }
   };
 
+  // --- FUNCIÓN ENVIAR MARKETING ---
+  const handleSendMarketing = () => {
+      alert(`🎉 Promoción "${marketingModal.title}" enviada exitosamente a ${marketingModal.target === 'all' ? 'todos los clientes' : 'el cliente seleccionado'}.`);
+      setMarketingModal(null);
+  };
+
   // --- RENDER ---
   if (!isAuthenticated) {
     return (
@@ -324,6 +325,7 @@ export default function AdminPanel() {
             <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-6">
                 <Loader2 size={40} className="animate-spin text-[#D4AF37]" />
                 <h2 className={`${cinzel.className} text-2xl tracking-widest text-[#D4AF37]`}>CARGANDO DATOS...</h2>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">Sincronizando Google Cloud</p>
             </motion.div>
         </div>
     );
@@ -335,6 +337,7 @@ export default function AdminPanel() {
         <motion.button initial={{ y: 100 }} animate={{ y: 0 }} transition={{ delay: 1 }} onClick={handleInstallClick} className="fixed bottom-24 right-6 z-[60] bg-[#D4AF37] text-black p-4 rounded-full shadow-lg md:hidden"><Download size={24}/></motion.button>
       )}
 
+      {/* SIDEBAR PC */}
       <aside className="w-72 bg-white border-r border-gray-100 h-screen hidden md:flex flex-col z-20 shadow-sm">
         <div className="h-24 flex items-center justify-center border-b border-gray-50"><span className={`${cinzel.className} text-2xl tracking-widest font-bold`}>BRONZER<span className="text-[#D4AF37]">.</span></span></div>
         <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
@@ -343,15 +346,16 @@ export default function AdminPanel() {
                 <button key={item.id} onClick={() => {setActiveTab(item.id)}} className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm rounded-xl transition-all ${activeTab === item.id ? 'bg-[#0a0a0a] text-white shadow-lg' : 'text-gray-500 hover:bg-gray-50'}`}><item.icon size={18} className={activeTab === item.id ? "text-[#D4AF37]" : ""} /> {item.label}</button>
             ))}
             <p className="text-[10px] uppercase text-gray-400 font-bold px-4 mb-2 mt-6">Gestión</p>
-            {[{ id: "services", label: "Servicios", icon: Sparkles }, { id: "products", label: "Inventario", icon: ShoppingBag }, { id: "team", label: "Equipo", icon: Users }].map(item => (
+            {[{ id: "services", label: "Servicios", icon: Sparkles }, { id: "products", label: "Inventario", icon: ShoppingBag }, { id: "team", label: "Equipo", icon: Users }, { id: "marketing", label: "Marketing", icon: Gift }].map(item => (
                 <button key={item.id} onClick={() => {setActiveTab(item.id)}} className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm rounded-xl transition-all ${activeTab === item.id ? 'bg-[#0a0a0a] text-white shadow-lg' : 'text-gray-500 hover:bg-gray-50'}`}><item.icon size={18} className={activeTab === item.id ? "text-[#D4AF37]" : ""} /> {item.label}</button>
             ))}
         </nav>
         <div className="p-6 border-t border-gray-50"><button onClick={() => setIsAuthenticated(false)} className="w-full flex items-center justify-center gap-2 text-red-500 bg-red-50/50 py-3.5 rounded-xl text-xs font-bold uppercase hover:bg-red-50"><LogOut size={16} /> Cerrar Sesión</button></div>
       </aside>
 
+      {/* BOTTOM BAR MÓVIL */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-lg border-t border-gray-200 flex justify-around items-center p-2 z-50 pb-safe shadow-lg">
-          {[{ id: "overview", icon: Home, label: "Inicio" }, { id: "bookings", icon: Calendar, label: "Citas" }, { id: "products", icon: ShoppingBag, label: "Inv" }, { id: "services", icon: Sparkles, label: "Serv" }, { id: "team", icon: Users, label: "Equipo" }].map(t => (
+          {[{ id: "overview", icon: Home, label: "Inicio" }, { id: "bookings", icon: Calendar, label: "Citas" }, { id: "marketing", icon: Gift, label: "Promo" }, { id: "team", icon: Users, label: "Equipo" }].map(t => (
               <button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex flex-col items-center gap-1 p-2 rounded-xl ${activeTab === t.id ? 'text-[#D4AF37]' : 'text-gray-400'}`}><t.icon size={22} strokeWidth={activeTab === t.id ? 2.5 : 2} /><span className="text-[9px] font-medium">{t.label}</span></button>
           ))}
       </nav>
@@ -371,9 +375,9 @@ export default function AdminPanel() {
                          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100"><div className="flex items-center gap-2 mb-2 text-green-600"><DollarSign size={16}/> <span className="text-[10px] font-bold uppercase">Ingresos</span></div><p className={`${cinzel.className} text-xl md:text-3xl`}>${salesStats.total}</p></div>
                          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100"><div className="flex items-center gap-2 mb-2 text-blue-600"><Calendar size={16}/> <span className="text-[10px] font-bold uppercase">Citas</span></div><p className={`${cinzel.className} text-xl md:text-3xl`}>{reservations.length}</p></div>
                          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100"><div className="flex items-center gap-2 mb-2 text-purple-600"><ShoppingBag size={16}/> <span className="text-[10px] font-bold uppercase">Ventas</span></div><p className={`${cinzel.className} text-xl md:text-3xl`}>{salesStats.orders}</p></div>
-                         <div className="bg-[#0a0a0a] p-5 rounded-2xl shadow-lg text-white flex flex-col justify-center items-center text-center"><p className="text-[10px] text-[#D4AF37] uppercase tracking-widest mb-1">Estado</p><div className="flex items-center gap-2"><div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div> <span className="font-bold text-sm">Online</span></div></div>
+                         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100"><div className="flex items-center gap-2 mb-2 text-[#D4AF37]"><Users size={16}/> <span className="text-[10px] font-bold uppercase">Clientes</span></div><p className={`${cinzel.className} text-xl md:text-3xl`}>{clients.length}</p></div>
                     </div>
-
+                    {/* Gráfico */}
                     <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
                         <div className="flex justify-between items-center mb-8"><h3 className={`${cinzel.className} text-lg md:text-xl flex items-center gap-2`}><BarChart3 size={20} className="text-[#D4AF37]"/> Rendimiento</h3><span className="text-xs bg-gray-50 px-3 py-1 rounded-full text-gray-500">2025</span></div>
                         <div className="h-40 md:h-64 flex items-end justify-between gap-2 md:gap-4 px-2">
@@ -414,7 +418,41 @@ export default function AdminPanel() {
                             </div>
                         </div>
                     ))}
-                    {reservations.length === 0 && <div className="text-center text-gray-400 py-10 bg-white rounded-2xl border border-dashed border-gray-200">No hay citas registradas.</div>}
+                </div>
+            )}
+
+            {/* VISTA: MARKETING Y CLIENTES */}
+            {activeTab === 'marketing' && (
+                <div className="animate-in fade-in zoom-in duration-300">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className={`${cinzel.className} text-2xl text-[#191919]`}>Gestión de Clientes</h2>
+                        <button onClick={() => setMarketingModal({ type: 'all', title: 'Nueva Campaña', textColor: '#000000', bgColor: '#FFFFFF' })} className="bg-[#0a0a0a] text-white px-4 py-2 rounded-xl text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-[#D4AF37] transition-colors">
+                            <Plus size={16} /> Crear Campaña
+                        </button>
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                        <div className="grid grid-cols-12 bg-gray-50 p-3 text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+                            <div className="col-span-5 md:col-span-4">Nombre</div>
+                            <div className="col-span-5 md:col-span-6">Email</div>
+                            <div className="col-span-2 text-right">Acción</div>
+                        </div>
+                        {clients.length > 0 ? (
+                            clients.map((client, idx) => (
+                                <div key={idx} className="grid grid-cols-12 p-4 border-b border-gray-50 items-center text-sm hover:bg-gray-50/50 transition-colors">
+                                    <div className="col-span-5 md:col-span-4 font-medium text-[#191919] truncate pr-2">{client.Nombre}</div>
+                                    <div className="col-span-5 md:col-span-6 text-gray-500 truncate pr-2">{client.Email}</div>
+                                    <div className="col-span-2 flex justify-end">
+                                        <button onClick={() => setMarketingModal({ type: 'single', client, title: `Hola ${client.Nombre}`, textColor: '#000000', bgColor: '#FFFFFF' })} className="p-2 bg-[#D4AF37]/10 text-[#D4AF37] rounded-lg hover:bg-[#D4AF37] hover:text-white transition-colors">
+                                            <Gift size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="p-8 text-center text-gray-400 text-sm">No hay clientes registrados aún.</div>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -427,7 +465,6 @@ export default function AdminPanel() {
                             <div key={i} onClick={() => openEditProductModal(prod)} className="bg-white p-2.5 md:p-4 rounded-2xl border border-gray-100 shadow-sm relative active:scale-95 transition-transform cursor-pointer">
                                 <div className="aspect-square bg-gray-50 rounded-xl mb-3 overflow-hidden relative">
                                     {processGoogleImage(prod.img) ? <img src={processGoogleImage(prod.img)||''} className="w-full h-full object-cover"/> : <div className="h-full flex items-center justify-center text-gray-300"><ShoppingBag/></div>}
-                                    {prod.stock < 5 && <span className="absolute top-2 right-2 bg-red-500 text-white text-[9px] px-2 py-0.5 rounded font-bold shadow-sm">Low Stock</span>}
                                 </div>
                                 <h4 className="font-bold text-xs md:text-sm truncate text-gray-800">{prod.name}</h4>
                                 <div className="flex justify-between items-center mt-2">
@@ -455,7 +492,6 @@ export default function AdminPanel() {
                                         <div className="absolute top-3 right-3 text-gray-300"><Edit2 size={12}/></div>
                                     </div>
                                     <h4 className="font-bold text-xs md:text-sm text-gray-800 leading-tight mb-1">{serv.name}</h4>
-                                    <p className="text-[10px] text-gray-400 line-clamp-2 leading-relaxed mb-3">{serv.description}</p>
                                 </div>
                                 <div className="flex items-center justify-between border-t border-gray-50 pt-2 mt-2">
                                     <span className="text-[#D4AF37] font-bold text-sm">${serv.price}</span>
@@ -480,7 +516,6 @@ export default function AdminPanel() {
                                 <div>
                                     <h4 className="font-bold text-sm text-gray-800">{t.name}</h4>
                                     <p className="text-[10px] text-[#D4AF37] uppercase font-bold tracking-wider">{t.role}</p>
-                                    <div className="flex items-center gap-1 text-[10px] text-gray-400 mt-1"><Clock size={10} /> {t.schedule || "N/A"}</div>
                                 </div>
                                 <div className="ml-auto text-gray-300"><Edit2 size={16}/></div>
                             </div>
@@ -488,13 +523,12 @@ export default function AdminPanel() {
                     </div>
                 </div>
             )}
-
         </div>
       </main>
 
-      {/* --- MODALES UNIVERSALES --- */}
+      {/* --- MODALES --- */}
       <AnimatePresence>
-        {(editBooking || productModal || serviceModal || editSpecialist) && (
+        {(editBooking || productModal || serviceModal || editSpecialist || marketingModal) && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4">
                 <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="bg-white w-full md:w-[500px] max-h-[85vh] rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col shadow-2xl">
                     <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
@@ -503,12 +537,74 @@ export default function AdminPanel() {
                             {productModal && (isCreating ? 'Nuevo Producto' : 'Editar Producto')}
                             {serviceModal && (isCreating ? 'Nuevo Servicio' : 'Editar Servicio')}
                             {editSpecialist && 'Perfil Especialista'}
+                            {marketingModal && 'Diseñador de Promociones'}
                         </h3>
-                        <button onClick={() => { setEditBooking(null); setProductModal(null); setServiceModal(null); setEditSpecialist(null); }} className="bg-gray-50 p-2 rounded-full hover:bg-gray-200 transition-colors"><X size={18}/></button>
+                        <button onClick={() => { setEditBooking(null); setProductModal(null); setServiceModal(null); setEditSpecialist(null); setMarketingModal(null); }} className="bg-gray-50 p-2 rounded-full hover:bg-gray-200 transition-colors"><X size={18}/></button>
                     </div>
                     
                     <div className="p-6 overflow-y-auto space-y-5">
-                        {/* PRODUCTO */}
+                        
+                        {/* MODAL MARKETING (NUEVO) */}
+                        {marketingModal && (
+                            <div className="space-y-6">
+                                {/* VISUALIZADOR */}
+                                <div 
+                                    className="w-full h-48 rounded-2xl flex flex-col items-center justify-center text-center p-6 shadow-md relative overflow-hidden transition-all duration-300"
+                                    style={{ backgroundColor: marketingModal.bgColor, color: marketingModal.textColor }}
+                                >
+                                    {marketingModal.imageUrl && (
+                                        <div className="absolute inset-0 opacity-20">
+                                            <img src={marketingModal.imageUrl} className="w-full h-full object-cover" />
+                                        </div>
+                                    )}
+                                    <div className="relative z-10">
+                                        <h3 className={`${cinzel.className} text-2xl font-bold mb-2`}>{marketingModal.title || "Tu Título Aquí"}</h3>
+                                        <p className="text-xs opacity-80 uppercase tracking-widest">Cupón Exclusivo</p>
+                                    </div>
+                                </div>
+
+                                {/* CONTROLES DE DISEÑO */}
+                                <div className="space-y-4">
+                                    <input className="w-full p-3 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-[#D4AF37]" placeholder="Título del Cupón" value={marketingModal.title} onChange={e => setMarketingModal({...marketingModal, title: e.target.value})} />
+                                    
+                                    <div className="flex gap-4">
+                                        <div className="flex-1 flex flex-col gap-2">
+                                            <label className="text-[10px] uppercase font-bold text-gray-400">Fondo</label>
+                                            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-xl">
+                                                <Palette size={16} className="text-gray-400"/>
+                                                <input type="color" value={marketingModal.bgColor} onChange={e => setMarketingModal({...marketingModal, bgColor: e.target.value})} className="w-full h-6 bg-transparent cursor-pointer" />
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 flex flex-col gap-2">
+                                            <label className="text-[10px] uppercase font-bold text-gray-400">Texto</label>
+                                            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-xl">
+                                                <Palette size={16} className="text-gray-400"/>
+                                                <input type="color" value={marketingModal.textColor} onChange={e => setMarketingModal({...marketingModal, textColor: e.target.value})} className="w-full h-6 bg-transparent cursor-pointer" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-[10px] uppercase font-bold text-gray-400 mb-2 block">Imagen de Fondo (URL)</label>
+                                        <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl">
+                                            <ImageIcon size={16} className="text-gray-400"/>
+                                            <input className="bg-transparent w-full text-xs outline-none" placeholder="https://..." value={marketingModal.imageUrl || ''} onChange={e => setMarketingModal({...marketingModal, imageUrl: e.target.value})} />
+                                        </div>
+                                        <p className="text-[9px] text-gray-400 mt-1 pl-1">Recomendado: 600x300px. Sube tu imagen a Drive o Imgur.</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-4 border-t border-gray-100">
+                                    <button onClick={handleSendMarketing} className="flex-1 py-4 bg-[#0a0a0a] text-white rounded-xl text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 hover:bg-[#D4AF37] transition-colors">
+                                        <MailIcon size={16} /> Enviar Email
+                                    </button>
+                                    <button onClick={handleSendMarketing} className="flex-1 py-4 bg-white border border-gray-200 text-[#0a0a0a] rounded-xl text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 hover:bg-gray-50">
+                                        <Send size={16} /> Publicar
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {productModal && (
                             <>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-xl font-medium outline-none border border-transparent focus:border-[#D4AF37] transition-all" value={productModal.name} onChange={e => setProductModal({...productModal, name: e.target.value})} /></div>
@@ -523,7 +619,6 @@ export default function AdminPanel() {
                             </>
                         )}
                         
-                        {/* SERVICIO */}
                         {serviceModal && (
                              <>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-xl font-medium outline-none" value={serviceModal.name} onChange={e => setServiceModal({...serviceModal, name: e.target.value})} /></div>
@@ -532,25 +627,24 @@ export default function AdminPanel() {
                                     <div className="flex-1 space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Duración</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={serviceModal.duration} onChange={e => setServiceModal({...serviceModal, duration: e.target.value})} /></div>
                                 </div>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Categoría</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={serviceModal.category} onChange={e => setServiceModal({...serviceModal, category: e.target.value})} /></div>
-                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Link Imagen</label><input className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" value={serviceModal.img} onChange={e => setServiceModal({...serviceModal, img: e.target.value})} /></div>
                                 
                                 {/* SELECTOR DE ESPECIALISTAS */}
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Especialistas (Separar por comas)</label>
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Especialistas Asignados</label>
                                     <div className="flex gap-2">
                                         <input className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" value={serviceModal.specialists || ''} onChange={e => setServiceModal({...serviceModal, specialists: e.target.value})} placeholder="Ej: Dra. Elena, Lic. Sofia" />
-                                        <select className="p-3 bg-gray-100 rounded-xl text-xs outline-none w-1/3" onChange={(e) => { if(e.target.value) setServiceModal({...serviceModal, specialists: serviceModal.specialists ? `${serviceModal.specialists}, ${e.target.value}` : e.target.value}); }} value="">
+                                        <select className="p-3 bg-gray-100 rounded-xl text-xs outline-none w-1/3" onChange={(e) => { if(e.target.value) setServiceModal({...serviceModal, specialists: serviceModal.specialists ? `${serviceModal.specialists}, ${e.target.value}` : e.target.value}); }}>
                                             <option value="">+ Add</option>
                                             {team.map((t:any) => <option key={t.id} value={t.name}>{t.name}</option>)}
                                         </select>
                                     </div>
                                 </div>
 
+                                <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Link Imagen</label><input className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" value={serviceModal.img} onChange={e => setServiceModal({...serviceModal, img: e.target.value})} /></div>
                                 <button onClick={saveService} disabled={isProcessing} className="w-full bg-black text-white py-4 rounded-xl uppercase tracking-widest font-bold text-xs mt-4">Guardar</button>
                             </>
                         )}
 
-                        {/* CITA */}
                         {editBooking && (
                             <div className="space-y-4">
                                 <div><label className="text-[10px] font-bold text-gray-400 uppercase">Fecha</label><input type="date" className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editBooking.date} onChange={e => setEditBooking({...editBooking, date: e.target.value})} /></div>
@@ -559,7 +653,6 @@ export default function AdminPanel() {
                             </div>
                         )}
 
-                        {/* ESPECIALISTA */}
                         {editSpecialist && (
                              <>
                                 <div className="flex justify-center mb-4"><div className="w-20 h-20 rounded-full bg-gray-100 overflow-hidden border-2 border-gray-100"><img src={processGoogleImage(editSpecialist.img)||''} className="w-full h-full object-cover"/></div></div>
