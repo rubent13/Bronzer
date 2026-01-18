@@ -7,7 +7,9 @@ import { motion, AnimatePresence, Variants, useMotionValue, useTransform } from 
 import { 
   ArrowRight, Star, Clock, MapPin, 
   ShoppingBag, X, Check, Phone, Instagram, Mail,
-  Trash2, User, Calendar as CalIcon, ArrowLeft 
+  Trash2, User, Calendar as CalIcon, ArrowLeft,
+  // NUEVO: Iconos para banner y cupones
+  Gift, Sparkles, Tag, Percent
 } from 'lucide-react';
 import { Cinzel, Montserrat } from 'next/font/google';
 
@@ -277,6 +279,77 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState('pago_movil'); 
   const [paymentRef, setPaymentRef] = useState('');
 
+  // Función para normalizar horas
+  const normalizeTime = (time: string): string => {
+    if (!time) return '';
+    // Asegurar formato HH:MM
+    const parts = time.split(':');
+    if (parts.length === 1) {
+      return `${parts[0].padStart(2, '0')}:00`;
+    }
+    if (parts.length === 2) {
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    }
+    return time;
+  };
+
+  // Función para verificar si un horario está ocupado
+  const checkIfBooked = (specialistName: string, date: string, time: string): boolean => {
+    if (!specialistName || !date || !time) return false;
+    
+    const normalizedTime = normalizeTime(time);
+    
+    return existingBookings.some((booking: any) => {
+      // 1. Verificar especialista
+      const bookingSpecialist = booking.specialist || booking.especialista || '';
+      if (!bookingSpecialist || 
+          bookingSpecialist.toLowerCase().trim() !== specialistName.toLowerCase().trim()) {
+        return false;
+      }
+      
+      // 2. Verificar fecha
+      let bookingDate = '';
+      if (booking.date) {
+        bookingDate = booking.date.split('T')[0];
+      } else if (booking.fecha_cita) {
+        bookingDate = booking.fecha_cita.split('T')[0];
+      } else if (booking.start?.dateTime || booking.start?.date) {
+        const startDate = booking.start.dateTime || booking.start.date;
+        if (startDate) {
+          bookingDate = new Date(startDate).toISOString().split('T')[0];
+        }
+      }
+      
+      if (!bookingDate || bookingDate !== date) {
+        return false;
+      }
+      
+      // 3. Verificar hora
+      let bookingTime = '';
+      if (booking.time) {
+        bookingTime = normalizeTime(booking.time);
+      } else if (booking.hora_cita) {
+        bookingTime = normalizeTime(booking.hora_cita);
+      } else if (booking.start?.dateTime) {
+        try {
+          const dateObj = new Date(booking.start.dateTime);
+          bookingTime = dateObj.toLocaleTimeString('es-ES', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false 
+          }).replace('.', ':');
+          bookingTime = normalizeTime(bookingTime);
+        } catch (e) {
+          console.error('Error al parsear fecha:', e);
+          return false;
+        }
+      }
+      
+      // Comparar horas normalizadas
+      return bookingTime === normalizedTime;
+    });
+  };
+
   const filteredSpecialists = selectedService
     ? specialistsList.filter((spec) => {
         if (!selectedService.specialists || String(selectedService.specialists).trim() === "") {
@@ -353,24 +426,53 @@ const BookingModal: React.FC<BookingModalProps> = ({
             <button onClick={() => setStep(1)} className="text-xs text-gray-400 underline mb-4">Volver</button>
             <h2 className={`${cinzel.className} text-xl md:text-2xl mb-6 text-[#191919]`}>Disponibilidad</h2>
             <div className="flex gap-2 overflow-x-auto pb-4 mb-6 no-scrollbar">
-              {getNextDays().map((day, i) => (
-                <button key={i} onClick={() => setSelectedDate(day.isoDate)} className={`min-w-[70px] h-20 rounded-2xl border flex flex-col items-center justify-center transition-all shadow-sm ${selectedDate === day.isoDate ? 'bg-[#191919] text-[#E9E0D5] border-[#191919] shadow-md scale-105' : 'border-white/50 bg-white/40 text-gray-500 hover:border-[#96765A]'}`}>
-                  <span className="text-xs uppercase">{day.dayName}</span><span className="text-xl font-serif">{day.date}</span>
-                </button>
-              ))}
+              {getNextDays().map((day, i) => {
+                // Verificar si este especialista tiene citas en este día
+                const hasBookingsOnDay = selectedSpecialist && existingBookings.some((b: any) => {
+                  let bookingDate = '';
+                  if (b.date) bookingDate = b.date.split('T')[0];
+                  else if (b.fecha_cita) bookingDate = b.fecha_cita.split('T')[0];
+                  else if (b.start?.dateTime || b.start?.date) {
+                    const startDate = b.start.dateTime || b.start.date;
+                    bookingDate = startDate ? new Date(startDate).toISOString().split('T')[0] : '';
+                  }
+                  
+                  const bookingSpecialist = b.specialist || b.especialista || '';
+                  return (
+                    bookingDate === day.isoDate &&
+                    bookingSpecialist.toLowerCase() === selectedSpecialist.name.toLowerCase()
+                  );
+                });
+                
+                return (
+                  <button key={i} onClick={() => setSelectedDate(day.isoDate)} className={`
+                    min-w-[70px] h-20 rounded-2xl border flex flex-col items-center justify-center transition-all shadow-sm relative
+                    ${selectedDate === day.isoDate 
+                      ? 'bg-[#191919] text-[#E9E0D5] border-[#191919] shadow-md scale-105' 
+                      : 'border-white/50 bg-white/40 text-gray-500 hover:border-[#96765A] hover:bg-white/60'
+                    }
+                  `}>
+                    <span className="text-xs uppercase">{day.dayName}</span>
+                    <span className="text-xl font-serif">{day.date}</span>
+                    {hasBookingsOnDay && (
+                      <div className="absolute top-1 right-1 w-2 h-2 bg-[#96765A]/70 rounded-full"></div>
+                    )}
+                  </button>
+                )
+              })}
             </div>
             <AnimatePresence>
-              {selectedDate && (
+              {selectedDate && selectedSpecialist && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                  <p className="text-xs uppercase tracking-widest mb-3 text-[#191919]">Horas Disponibles</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs uppercase tracking-widest text-[#191919]">Horas Disponibles</p>
+                    <p className="text-[10px] text-gray-500">
+                      {selectedSpecialist.name} • {getNextDays().find(d => d.isoDate === selectedDate)?.fullDate}
+                    </p>
+                  </div>
                   <div className="grid grid-cols-3 gap-3">
                     {['09:00', '11:00', '14:30', '16:00', '17:30'].map(time => {
-                      // --- NUEVO: Verificar si el especialista ya tiene cita en esta fecha y hora ---
-                      const isBooked = existingBookings.some((booking: any) => 
-                        booking.specialist === selectedSpecialist?.name &&
-                        booking.date === selectedDate &&
-                        booking.time === time
-                      );
+                      const isBooked = checkIfBooked(selectedSpecialist.name, selectedDate, time);
                       
                       return (
                         <button 
@@ -381,18 +483,46 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               setStep(3); 
                             }
                           }} 
-                          disabled={isBooked} // Deshabilitar si está ocupado
-                          className={`py-2 text-sm transition-all ${
-                            isBooked 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' // Estilo ocupado
-                            : GLASS_STYLE.replace('py-3', '').replace('px-8','').replace('tracking-widest','') + ' hover:bg-white/20' // Estilo normal
-                          }`}
+                          disabled={isBooked}
+                          className={`
+                            py-2 text-sm transition-all duration-200 relative overflow-hidden
+                            ${isBooked 
+                              ? 'bg-gray-100/50 text-gray-400 cursor-not-allowed border border-gray-300/50 rounded-xl' 
+                              : GLASS_STYLE.replace('py-3', '').replace('px-8','').replace('tracking-widest','') + ' hover:bg-white/20 hover:scale-[1.02] active:scale-[0.98]'
+                            }
+                            ${selectedTime === time && !isBooked ? 'bg-[#96765A]/20 border-[#96765A]/30' : ''}
+                          `}
+                          title={isBooked ? `Horario ocupado por ${selectedSpecialist.name}` : `Disponible - ${time}`}
                         >
-                          {time}
-                          {isBooked && <span className="block text-[8px] mt-1">OCUPADO</span>}
+                          <span className="relative z-10 font-medium">{time}</span>
+                          {isBooked && (
+                            <>
+                              <span className="absolute inset-0 bg-gradient-to-br from-gray-200/30 to-gray-300/20 rounded-xl"></span>
+                              <span className="block text-[8px] mt-1 text-gray-500 font-medium">OCUPADO</span>
+                            </>
+                          )}
+                          {selectedTime === time && !isBooked && (
+                            <span className="absolute inset-0 bg-[#96765A]/10 rounded-xl border border-[#96765A]/20"></span>
+                          )}
                         </button>
                       )
                     })}
+                  </div>
+                  
+                  {/* Mostrar estadísticas */}
+                  <div className="mt-4 text-xs text-gray-500 flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded-full bg-gray-300/50"></div>
+                      <span>Disponible</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded-full bg-[#96765A]/70"></div>
+                      <span>Ocupado</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded-full bg-[#96765A]/20"></div>
+                      <span>Seleccionado</span>
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -551,7 +681,6 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
   };
 
   const currentProduct = products[currentIndex];
-  // Asegúrate de pasar processGoogleImage o definirla fuera
   const imgUrl = processGoogleImage(currentProduct.img);
 
   // Lógica 3D Mouse
@@ -575,7 +704,6 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
   function handleMouseLeave() { x.set(0); y.set(0); }
 
   return (
-    // CAMBIO: h-auto en móvil, min-h-screen en PC. Padding vertical ajustado.
     <div className="w-full h-auto md:min-h-[700px] relative flex flex-col items-center justify-center overflow-hidden py-12 md:py-0 bg-[#E9E0D5]">
       
       {/* Botón Ver Todo */}
@@ -649,7 +777,6 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
         </div>
 
         {/* CONTROLES (ABAJO DE TODO EN MÓVIL) */}
-        {/* En móvil: relative mt-8 (debajo del contenido). En PC: absolute bottom-10 */}
         <div className="relative md:absolute mt-8 md:mt-0 md:bottom-10 left-auto md:left-1/2 md:-translate-x-1/2 flex items-center gap-6 md:gap-8 z-30">
             <button onClick={prevSlide} className="p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowLeft size={18}/></button>
             <div className="flex gap-2">
@@ -834,6 +961,123 @@ const ClientNewsModal = ({ user, onClose }: any) => (
     </motion.div>
 );
 
+// --- NUEVO: COMPONENTE MODAL DE CUPONES ---
+const CouponsModal: React.FC<{ 
+  coupons: any[], 
+  onClose: () => void,
+  currentUser: any 
+}> = ({ coupons, onClose, currentUser }) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      exit={{ opacity: 0 }} 
+      className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+    >
+      <div className="bg-[#E9E0D5]/95 backdrop-blur-xl w-full max-w-lg max-h-[80vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-white/50 relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-[#191919] z-20">
+          <X size={24} />
+        </button>
+        
+        <div className="p-6 border-b border-[#96765A]/20">
+          <h3 className={`${cinzel.className} text-2xl text-[#191919] flex items-center gap-2`}>
+            <Gift size={24} className="text-[#96765A]" />
+            Tus Cupones
+          </h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Hola {currentUser?.Nombre}, aquí tienes tus promociones activas
+          </p>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {coupons.length === 0 ? (
+            <div className="text-center py-10 text-gray-400">
+              <Gift size={48} className="mx-auto mb-4 opacity-30" />
+              <p>No tienes cupones disponibles</p>
+              <p className="text-xs mt-2">¡Vuelve pronto para nuevas promociones!</p>
+            </div>
+          ) : (
+            coupons.map((coupon, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="relative rounded-2xl overflow-hidden shadow-lg"
+                style={{ 
+                  backgroundColor: coupon.color_fondo || '#191919',
+                  color: coupon.color_texto || '#FFFFFF',
+                  background: coupon.gradient_color 
+                    ? `linear-gradient(135deg, ${coupon.color_fondo}, ${coupon.gradient_color})`
+                    : coupon.color_fondo
+                }}
+              >
+                {coupon.imagen_url && (
+                  <div className="absolute inset-0 opacity-20">
+                    <img src={coupon.imagen_url} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                
+                <div className="relative z-10 p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <span className="text-xs uppercase tracking-widest opacity-80 border border-current px-2 py-1 rounded">
+                        {coupon.tipo === 'discount' ? 'DESCUENTO' : 
+                         coupon.tipo === 'giftcard' ? 'GIFT CARD' : 'REGALO'}
+                      </span>
+                      <h4 className={`${cinzel.className} text-2xl mt-2 mb-1`}>
+                        {coupon.título || 'Promoción Especial'}
+                      </h4>
+                      {coupon.valor && (
+                        <p className="text-4xl font-black mb-2">
+                          {coupon.tipo === 'discount' 
+                            ? `${coupon.valor}% OFF` 
+                            : `$${coupon.valor}`}
+                        </p>
+                      )}
+                    </div>
+                    <Gift size={32} className="opacity-60" />
+                  </div>
+                  
+                  <div className="flex items-center justify-between border-t border-current/30 pt-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider opacity-80">
+                        Válido para: {coupon.target || 'todo'}
+                      </p>
+                      <p className="text-[10px] opacity-60 mt-1">
+                        Email: {coupon.email || currentUser?.Email}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        alert(`Cupón ${coupon.título} copiado para uso en checkout`);
+                        // Aquí puedes agregar lógica para aplicar el cupón
+                      }}
+                      className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-bold uppercase hover:bg-white/30 transition-colors"
+                      style={{ color: coupon.color_texto || '#FFFFFF' }}
+                    >
+                      Usar Cupón
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+        
+        <div className="p-6 border-t border-[#96765A]/20">
+          <button 
+            onClick={onClose}
+            className="w-full py-3 text-xs uppercase tracking-widest bg-[#191919] text-[#96765A] rounded-full hover:bg-black transition-colors"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 export default function BronzerFullPlatform() {
   const [showSplash, setShowSplash] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
@@ -850,6 +1094,19 @@ export default function BronzerFullPlatform() {
   
   // --- NUEVO: Estado para citas existentes ---
   const [existingBookings, setExistingBookings] = useState<any[]>([]);
+  
+  // --- NUEVO: Estado para configuración del banner ---
+  const [bannerConfig, setBannerConfig] = useState({
+    active: false,
+    text: "Envíos Gratis en compras mayores a $50 ✨",
+    bgColor: "#96765A",
+    textColor: "#FFFFFF",
+    animation: "none"
+  });
+  
+  // --- NUEVO: Estado para cupones del usuario ---
+  const [userCoupons, setUserCoupons] = useState<any[]>([]);
+  const [showCouponsModal, setShowCouponsModal] = useState(false);
 
   // --- NUEVO: ESTADO PARA MOSTRAR TIENDA COMPLETA ---
   const [showFullShop, setShowFullShop] = useState(false);
@@ -892,12 +1149,47 @@ export default function BronzerFullPlatform() {
     }
   };
 
+  // --- NUEVO: Función para cargar configuración del banner ---
+  const fetchBannerConfig = async () => {
+    try {
+      const response = await fetch('/api/config');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          setBannerConfig(data.data);
+        }
+      }
+    } catch (error) {
+      console.error("Error cargando configuración:", error);
+    }
+  };
+
+  // --- NUEVO: Función para cargar cupones del usuario actual ---
+  const fetchUserCoupons = async () => {
+    if (!currentUser?.Email) return;
+    
+    try {
+      const response = await fetch(`/api/coupons?email=${encodeURIComponent(currentUser.Email)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setUserCoupons(data.data);
+        }
+      }
+    } catch (error) {
+      console.error("Error cargando cupones:", error);
+    }
+  };
+
   useEffect(() => {
     // CARGA DE DATOS REALES (SI EXISTEN)
     const fetchData = async () => {
         try {
-            // Cargar citas existentes
+            // Cargar citas existentes PRIMERO
             await fetchExistingBookings();
+            
+            // Cargar configuración del banner
+            await fetchBannerConfig();
 
             const resProd = await fetch('/api/database?tab=Productos');
             const dataProd = await resProd.json();
@@ -918,6 +1210,13 @@ export default function BronzerFullPlatform() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // --- NUEVO: Cargar cupones cuando el usuario inicia sesión ---
+  useEffect(() => {
+    if (currentUser?.Email) {
+      fetchUserCoupons();
+    }
+  }, [currentUser]);
 
   // --- FUNCIÓN CORREGIDA: GUARDAR CITAS EN PESTAÑA 'Citas' ---
   const saveToDatabase = async (extraData: Record<string, unknown>): Promise<void> => {
@@ -1045,6 +1344,37 @@ export default function BronzerFullPlatform() {
         {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       </AnimatePresence>
       
+      {/* NUEVO: BANNER SUPERIOR DINÁMICO */}
+      {bannerConfig.active && (
+        <motion.div 
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="w-full py-2 overflow-hidden relative z-40"
+          style={{ 
+            backgroundColor: bannerConfig.bgColor,
+            background: bannerConfig.gradientColor 
+              ? `linear-gradient(135deg, ${bannerConfig.bgColor}, ${bannerConfig.gradientColor})`
+              : bannerConfig.bgColor
+          }}
+        >
+          <div className={`container mx-auto px-4 flex items-center justify-center gap-3 ${
+            bannerConfig.animation === 'marquee' 
+              ? 'animate-marquee whitespace-nowrap' 
+              : bannerConfig.animation === 'pulse' 
+                ? 'animate-pulse' 
+                : ''
+          }`}>
+            <span 
+              className="text-xs font-bold uppercase tracking-widest flex items-center gap-2"
+              style={{ color: bannerConfig.textColor }}
+            >
+              <Sparkles size={12} />
+              {bannerConfig.text}
+            </span>
+          </div>
+        </motion.div>
+      )}
+      
       {/* HEADER CORREGIDO: ALTURA Y MÁRGENES MÓVILES */}
       <header className={`fixed top-0 w-full z-50 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] border-b ${isScrolled ? 'bg-[#E9E0D5]/90 backdrop-blur-xl border-[#96765A]/10 h-16 md:h-20 shadow-sm' : 'bg-transparent border-transparent h-20 md:h-32'}`}>
         <div className="container mx-auto h-full flex items-center justify-between relative">
@@ -1066,17 +1396,34 @@ export default function BronzerFullPlatform() {
 
           {/* 3. ICONOS Y BOTÓN: 'right-8' para móvil */}
           <div className="absolute right-8 md:right-12 top-1/2 -translate-y-1/2 flex items-center gap-4 md:gap-6 z-20">
-            {/* --- BOTÓN DE ACCESO CLIENTE --- */}
+            {/* --- BOTÓN DE ACCESO CLIENTE MEJORADO --- */}
             <button 
-                onClick={() => currentUser ? setClientNewsOpen(true) : setClientAuthOpen(true)}
+                onClick={() => {
+                  if (currentUser) {
+                    setClientNewsOpen(true);
+                    // También mostrar cupones si tiene
+                    if (userCoupons.length > 0) {
+                      setShowCouponsModal(true);
+                    }
+                  } else {
+                    setClientAuthOpen(true);
+                  }
+                }}
                 className="relative cursor-pointer hover:text-[#96765A] transition-colors mr-4"
             >
                 {currentUser ? (
+                  <div className="relative">
                     <div className="w-6 h-6 bg-[#96765A] rounded-full flex items-center justify-center text-white text-xs font-bold">
-                        {currentUser.Nombre?.charAt(0)}
+                      {currentUser.Nombre?.charAt(0)}
                     </div>
+                    {userCoupons.length > 0 && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                        <span className="text-[8px] text-white font-bold">{userCoupons.length}</span>
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                    <User size={20} strokeWidth={1.5} />
+                  <User size={20} strokeWidth={1.5} />
                 )}
             </button>
             {/* ------------------------------- */}
@@ -1282,6 +1629,14 @@ export default function BronzerFullPlatform() {
                 user={currentUser} 
                 onClose={() => setClientNewsOpen(false)} 
             />
+        )}
+        {/* NUEVO: MODAL DE CUPONES */}
+        {showCouponsModal && (
+          <CouponsModal 
+            coupons={userCoupons}
+            onClose={() => setShowCouponsModal(false)}
+            currentUser={currentUser}
+          />
         )}
       </AnimatePresence>
     </div>
