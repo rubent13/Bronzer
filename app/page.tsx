@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-// ELIMINADO: import Image from 'next/image'; -> Usaremos <img> nativo
-// ELIMINADO: import { Cinzel, Montserrat } from 'next/font/google'; -> Usaremos CSS
 import { motion, AnimatePresence, Variants, useMotionValue, useTransform } from 'framer-motion';
 import { 
   ArrowRight, Star, Clock, MapPin, 
@@ -12,7 +10,6 @@ import {
 } from 'lucide-react';
 
 // --- FUENTES (SIMULACIÓN PARA MANTENER TU ESTRUCTURA) ---
-// En React puro usamos CSS. Definimos estos objetos para no romper tu lógica de clases.
 const cinzel = { className: 'font-cinzel' };
 const montserrat = { className: 'font-montserrat' };
 
@@ -1095,12 +1092,20 @@ export default function BronzerFullPlatform() {
   const [existingBookings, setExistingBookings] = useState<any[]>([]);
   
   // --- NUEVO: Estado para configuración del banner ---
-  const [bannerConfig, setBannerConfig] = useState({
+  const [bannerConfig, setBannerConfig] = useState<{
+    active: boolean;
+    text: string;
+    bgColor: string;
+    textColor: string;
+    animation: string;
+    gradientColor?: string; // Propiedad opcional añadida
+  }>({
     active: false,
     text: "Envíos Gratis en compras mayores a $50 ✨",
     bgColor: "#96765A",
     textColor: "#FFFFFF",
-    animation: "none"
+    animation: "none",
+    gradientColor: "" // Valor inicial vacío
   });
   
   // --- NUEVO: Estado para cupones del usuario ---
@@ -1155,7 +1160,7 @@ export default function BronzerFullPlatform() {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.data) {
-          setBannerConfig(data.data);
+          setBannerConfig(prev => ({ ...prev, ...data.data }));
         }
       }
     } catch (error) {
