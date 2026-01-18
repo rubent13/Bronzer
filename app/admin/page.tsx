@@ -12,11 +12,11 @@ import {
   Gift, Palette, Image as ImageIcon, Send, Mail as MailIcon, 
   CheckSquare, Square, Megaphone, CreditCard, Percent, Target
 } from 'lucide-react';
+import { Cinzel, Montserrat } from 'next/font/google';
 
-// --- FUENTES (CORRECCIÓN: Usamos CSS estándar en lugar de next/font) ---
-// Simulamos los objetos de fuente para mantener la estructura del código
-const cinzel = { className: 'font-cinzel' };
-const montserrat = { className: 'font-montserrat' };
+// --- FUENTES (Simuladas para evitar errores si no están configuradas en Next.js) ---
+const cinzel = { className: 'font-serif' };
+const montserrat = { className: 'font-sans' };
 
 // --- DATOS INICIALES (VACÍOS) ---
 const INITIAL_RESERVATIONS: any[] = [];
@@ -47,10 +47,10 @@ export default function AdminPanel() {
   // Estados de Formularios
   const [loginData, setLoginData] = useState({ user: "", pass: "" });
 
-  // --- ESTADO BANNER (NUEVO) ---
+  // --- ESTADO BANNER (Sincronizado) ---
   const [bannerConfig, setBannerConfig] = useState({
     active: true,
-    text: "Envíos Gratis en compras mayores a $50 ✨",
+    text: "Cargando configuración...",
     bgColor: "#96765A",
     textColor: "#FFFFFF",
     animation: "marquee" // 'none', 'marquee', 'pulse'
@@ -146,31 +146,39 @@ export default function AdminPanel() {
   const fetchAllData = async () => {
     setIsLoadingGoogle(true);
     try {
-      // Agregamos fetch de Clientes y Configuración si es necesario
-      const [resCal, resProd, resTeam, resServ, resSales, resClients, resConfig] = await Promise.all([
+      // 1. Cargar Configuración del Banner (Desde api/config)
+      try {
+        const resConfig = await fetch('/api/config');
+        const dataConfig = await resConfig.json();
+        if (dataConfig.success && dataConfig.data) {
+            setBannerConfig(dataConfig.data);
+        }
+      } catch (e) { console.error("Error cargando config banner", e); }
+
+      // 2. Cargar Datos de Tablas
+      const [resCal, resProd, resTeam, resServ, resSales, resClients] = await Promise.all([
         fetch('/api/calendar'),
         fetch('/api/database?tab=Productos'),
         fetch('/api/database?tab=ESPECIALISTAS'),
         fetch('/api/database?tab=Servicios'),
         fetch('/api/database?tab=Ventas'),
-        fetch('/api/database?tab=Clientes Registrados'),
-        fetch('/api/config')
+        fetch('/api/database?tab=Clientes Registrados')
       ]);
 
-      const [dataCal, dataProd, dataTeam, dataServ, dataSales, dataClients, dataConfig] = await Promise.all([
-        resCal.json(), resProd.json(), resTeam.json(), resServ.json(), resSales.json(), resClients.json(), resConfig.json()
+      const [dataCal, dataProd, dataTeam, dataServ, dataSales, dataClients] = await Promise.all([
+        resCal.json(), resProd.json(), resTeam.json(), resServ.json(), resSales.json(), resClients.json()
       ]);
 
       if (dataCal.success) {
         const googleBookings = dataCal.data.map((evt: any) => ({
             id: evt.id,
-            client: evt.client_name || 'Cliente', 
+            client: evt.client_name || evt.cliente || 'Cliente', 
             phone: evt.phone || '---',
             note: evt.note || '',
-            service: evt.service || 'Servicio',
-            specialist: evt.specialist || '---',
-            date: evt.date, 
-            time: evt.time, 
+            service: evt.service || evt.servicio || 'Servicio',
+            specialist: evt.specialist || evt.especialista || '---',
+            date: evt.date || evt.fecha || '', 
+            time: evt.time || evt.hora || '', 
             status: evt.status || 'Confirmado'
         }));
         setReservations(googleBookings);
@@ -180,24 +188,21 @@ export default function AdminPanel() {
       if (dataTeam.success) setTeam(dataTeam.data);
       if (dataServ.success) setServices(dataServ.data);
       
-      // Actualizar Banner Config desde Sheets
-      if (dataConfig.success && dataConfig.data) {
-          setBannerConfig(dataConfig.data);
-      }
-
       // Guardar Clientes
       if (dataClients.success) {
-          // Simulamos lastSent porque no viene de la DB aun, o lo agregamos
           const loadedClients = dataClients.data.map((c: any) => ({
              ...c,
-             lastSent: '-' 
+             Nombre: c.Nombre || c.nombre || 'Sin Nombre',
+             Email: c.Email || c.email || 'Sin Email',
+             lastSent: c.lastSent || '-' 
           }));
           setClients(loadedClients);
       }
 
       if (dataSales.success) {
         const salesData = dataSales.data;
-        const totalAmount = salesData.reduce((acc: number, curr: any) => acc + (Number(curr.total) || 0), 0);
+        // Ajuste para leer "total" o "Monto" según venga del Excel
+        const totalAmount = salesData.reduce((acc: number, curr: any) => acc + (Number(curr.total) || Number(curr.Monto) || 0), 0);
         setSalesStats({ total: totalAmount, orders: salesData.length });
 
         const salesByMonth = new Array(12).fill(0);
@@ -205,7 +210,7 @@ export default function AdminPanel() {
             const saleDate = new Date(sale.date || sale.fecha || new Date()); 
             if (!isNaN(saleDate.getTime())) {
                 const monthIndex = saleDate.getMonth();
-                salesByMonth[monthIndex] += Number(sale.total) || 0;
+                salesByMonth[monthIndex] += Number(sale.total) || Number(sale.Monto) || 0;
             }
         });
         setMonthlySales(salesByMonth);
@@ -270,11 +275,10 @@ export default function AdminPanel() {
     finally { setIsProcessing(false); }
   };
 
-  // Funciones de Producto (Simplificadas para brevedad, usando las originales)
+  // Funciones de Producto
   const openNewProductModal = () => { setIsCreating(true); setProductModal({ id: `PROD-${Date.now()}`, name: '', price: 0, stock: 1, img: '' }); };
   const openEditProductModal = (prod: any) => { setIsCreating(false); setProductModal(prod); };
   const saveProduct = async () => {
-      // ... Lógica original de guardado ...
       if (!productModal) return;
       setIsProcessing(true);
       const rowData = [productModal.id, productModal.name, productModal.price, productModal.stock, productModal.img, productModal.description || '', productModal.promotion || ''];
@@ -290,7 +294,6 @@ export default function AdminPanel() {
   const openNewServiceModal = () => { setIsCreating(true); setServiceModal({ id: `S-${Date.now()}`, name: '', price: 0, duration: '60 min', category: 'General', specialists: '' }); };
   const openEditServiceModal = (serv: any) => { setIsCreating(false); setServiceModal(serv); };
   const saveService = async () => {
-      // ... Lógica original de guardado ...
       if (!serviceModal) return;
       setIsProcessing(true);
       const rowData = [serviceModal.id, serviceModal.name, serviceModal.price, serviceModal.duration, serviceModal.category, serviceModal.description || '', serviceModal.img || '', serviceModal.specialists || ''];
@@ -304,7 +307,6 @@ export default function AdminPanel() {
 
   // Funciones de Especialista
   const saveSpecialistEdit = async () => {
-    // ... Lógica original de guardado ...
     if (!editSpecialist) return;
     setIsProcessing(true);
     const rowData = [editSpecialist.id, editSpecialist.name, editSpecialist.role, editSpecialist.img, editSpecialist.schedule, editSpecialist.specialty || '', editSpecialist.experience || '', editSpecialist.certified || '', editSpecialist.services || ''];
@@ -314,12 +316,12 @@ export default function AdminPanel() {
     } catch (e) { alert("Error"); } finally { setIsProcessing(false); }
   };
 
-  // --- NUEVAS FUNCIONES DE MARKETING ---
+  // --- NUEVAS FUNCIONES DE MARKETING (SINCRONIZADAS) ---
   
   const handleSaveBanner = async () => {
     setIsProcessing(true);
     try {
-        // Guardar en la hoja CONFIG
+        // Guardar en la hoja CONFIG usando api/database que tiene lógica de limpieza
         const rowData = [
             bannerConfig.active ? "TRUE" : "FALSE",
             bannerConfig.text,
@@ -329,12 +331,12 @@ export default function AdminPanel() {
         ];
         
         await fetch('/api/database', {
-            method: 'POST', // POST en api/database ahora debe manejar limpieza de CONFIG si es necesario
+            method: 'POST', 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tab: 'CONFIG', data: rowData })
         });
         
-        alert("✅ Banner actualizado exitosamente.");
+        alert("✅ Banner actualizado exitosamente. Los cambios son visibles en la web.");
     } catch (error) {
         alert("Error al guardar banner");
     } finally {
@@ -356,7 +358,7 @@ export default function AdminPanel() {
                   email,
                   marketingModal.title,
                   marketingModal.couponType || 'discount',
-                  marketingModal.couponValue || '0', // Guardamos el valor para cálculos
+                  marketingModal.couponValue || '0', 
                   marketingModal.couponTarget || 'all',
                   marketingModal.bgColor || '#000000',
                   marketingModal.textColor || '#FFFFFF',
@@ -405,19 +407,14 @@ export default function AdminPanel() {
   };
 
   const filteredClients = clients.filter(client => 
-      client.Nombre?.toLowerCase().includes(clientSearch.toLowerCase()) || 
-      client.Email?.toLowerCase().includes(clientSearch.toLowerCase())
+      (client.Nombre || "").toLowerCase().includes(clientSearch.toLowerCase()) || 
+      (client.Email || "").toLowerCase().includes(clientSearch.toLowerCase())
   );
 
   // --- RENDER ---
   if (!isAuthenticated) {
     return (
       <div className={`h-screen w-full bg-[#050505] flex items-center justify-center ${montserrat.className}`}>
-        <style>{`
-            @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap');
-            .font-cinzel { font-family: 'Cinzel', serif; }
-            .font-montserrat { font-family: 'Montserrat', sans-serif; }
-        `}</style>
         <div className="bg-white/10 backdrop-blur-md p-10 w-full max-w-sm text-center shadow-2xl border border-white/20 rounded-3xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent"></div>
           <h1 className={`${cinzel.className} text-4xl mb-2 text-[#D4AF37]`}>BRONZER</h1>
@@ -446,14 +443,6 @@ export default function AdminPanel() {
 
   return (
     <div className={`h-screen flex bg-slate-50 overflow-hidden ${montserrat.className}`}>
-      <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap');
-          .font-cinzel { font-family: 'Cinzel', serif; }
-          .font-montserrat { font-family: 'Montserrat', sans-serif; }
-          .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-          .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
-      `}</style>
-
       {!isAppInstalled && (deferredPrompt || isMobile) && (
         <motion.button initial={{ y: 100 }} animate={{ y: 0 }} transition={{ delay: 1 }} onClick={handleInstallClick} className="fixed bottom-24 right-6 z-[60] bg-[#D4AF37] text-black p-4 rounded-full shadow-lg md:hidden"><Download size={24}/></motion.button>
       )}
@@ -754,12 +743,7 @@ export default function AdminPanel() {
 
                                     <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
                                         {/* Filtrado de clientes */}
-                                        {clients
-                                            .filter(client => 
-                                                (client.Nombre || "").toLowerCase().includes(clientSearch.toLowerCase()) || 
-                                                (client.Email || "").toLowerCase().includes(clientSearch.toLowerCase())
-                                            )
-                                            .map((client, i) => {
+                                        {filteredClients.map((client, i) => {
                                             const isSelected = marketingModal.selectedEmails?.includes(client.Email);
                                             return (
                                                 <div key={i} onClick={() => toggleClientSelection(client.Email)} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer text-xs ${isSelected ? 'bg-white border border-[#D4AF37]/30 shadow-sm' : 'hover:bg-gray-100'}`}>
