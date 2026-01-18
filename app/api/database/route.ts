@@ -25,9 +25,13 @@ async function getSheets() {
 }
 
 export async function GET(request: Request) {
+  let spreadsheetId = "";
+  let tabName = "";
+
   try {
     const { searchParams } = new URL(request.url);
-    const tabName = searchParams.get('tab');
+    // decodeURIComponent asegura que espacios como %20 se conviertan a espacios reales
+    tabName = decodeURIComponent(searchParams.get('tab') || '').trim();
 
     if (!tabName) {
       return NextResponse.json({ success: false, error: 'Falta el nombre de la pestaña (tab)' });
@@ -36,15 +40,16 @@ export async function GET(request: Request) {
     const sheets = await getSheets();
     
     // 2. Selección Inteligente del ID de la Hoja
-    // Intenta leer NEXT_PUBLIC_SHEET_ID, si no existe, prueba GOOGLE_SHEET_ID
-    const spreadsheetId = process.env.NEXT_PUBLIC_SHEET_ID || process.env.GOOGLE_SHEET_ID;
+    spreadsheetId = process.env.NEXT_PUBLIC_SHEET_ID || process.env.GOOGLE_SHEET_ID || "";
 
     if (!spreadsheetId) {
       return NextResponse.json({ success: false, error: 'No se encontró el ID de la hoja (NEXT_PUBLIC_SHEET_ID) en .env' });
     }
 
-    // 3. Manejo de Espacios en nombres de pestañas (CRÍTICO para "Clientes Registrados")
-    const safeTabName = tabName.includes(' ') ? `'${tabName}'` : tabName;
+    // 3. Manejo de Espacios: Si tiene espacios, debe ir entre comillas simples 'Nombre Hoja'
+    const safeTabName = tabName.includes(' ') && !tabName.startsWith("'") ? `'${tabName}'` : tabName;
+
+    console.log(`📡 Conectando a Sheet: ${spreadsheetId.substring(0, 5)}... | Tab: ${safeTabName}`);
 
     // Leemos un rango amplio para detectar todo
     const response = await sheets.spreadsheets.values.get({
@@ -62,12 +67,14 @@ export async function GET(request: Request) {
     // Usamos la primera fila como "Claves" (Headers) para crear el objeto JSON
     const headers = rows[0]; 
     const data = rows.slice(1).map((row, rowIndex) => {
-      const obj: any = { rowIndex: rowIndex + 2 }; // Índice real en Excel (1-based)
+      const obj: any = { rowIndex: rowIndex + 2 }; // Índice real en Excel (1-based, saltando header)
       headers.forEach((header, index) => {
         // Limpiamos el header y lo usamos como clave
-        const key = header.trim();
-        // Asignamos el valor o string vacío si no existe
-        obj[key] = row[index] || ''; 
+        if (header) {
+            const key = header.trim();
+            // Asignamos el valor o string vacío si no existe
+            obj[key] = row[index] || ''; 
+        }
       });
       return obj;
     });
@@ -76,6 +83,22 @@ export async function GET(request: Request) {
 
   } catch (error: any) {
     console.error(`❌ Error Conexión Sheets (${request.url}):`, error.message);
+    
+    // Manejo específico de errores comunes para ayudar al usuario
+    if (error.code === 403) {
+        return NextResponse.json({ 
+            success: false, 
+            error: `PERMISO DENEGADO. Comparte tu hoja con: ${process.env.GOOGLE_CLIENT_EMAIL}` 
+        });
+    }
+    
+    if (error.code === 404 || error.message.includes('Unable to parse range')) {
+        return NextResponse.json({ 
+            success: false, 
+            error: `NO ENCONTRADO. Revisa: 1. Nombre de pestaña "${tabName}" sea exacto. 2. ID hoja "${spreadsheetId}" sea correcto.` 
+        });
+    }
+
     // Devolvemos el error detallado para ver qué pasa en el frontend
     return NextResponse.json({ success: false, error: error.message });
   }
@@ -92,7 +115,7 @@ export async function POST(request: Request) {
     if (!spreadsheetId) throw new Error("Falta Spreadsheet ID");
 
     // Manejo de comillas para pestañas con espacios
-    const safeTabName = tab.includes(' ') ? `'${tab}'` : tab;
+    const safeTabName = tab.includes(' ') && !tab.startsWith("'") ? `'${tab}'` : tab;
 
     await sheets.spreadsheets.values.append({
       spreadsheetId,
@@ -121,7 +144,7 @@ export async function PUT(request: Request) {
     if (!spreadsheetId) throw new Error("Falta Spreadsheet ID");
 
     // Manejo de comillas para pestañas con espacios
-    const safeTabName = tab.includes(' ') ? `'${tab}'` : tab;
+    const safeTabName = tab.includes(' ') && !tab.startsWith("'") ? `'${tab}'` : tab;
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
