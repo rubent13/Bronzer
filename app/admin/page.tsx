@@ -8,7 +8,7 @@ import {
   LogOut, Plus, Trash2, Edit2, Search, CheckCircle, XCircle, 
   TrendingUp, DollarSign, Clock, Save, Phone, FileText, RefreshCw, Tag,
   Download, Loader2, Menu, X, Bell, ChevronRight, BarChart3, Home,
-  Gift, Palette, Image as ImageIcon, Send, Mail as MailIcon
+  Gift, Palette, Image as ImageIcon, Send, Mail as MailIcon, CheckSquare, Square
 } from 'lucide-react';
 import { Cinzel, Montserrat } from 'next/font/google';
 
@@ -35,7 +35,7 @@ export default function AdminPanel() {
   const [products, setProducts] = useState<any[]>(INITIAL_PRODUCTS);
   const [team, setTeam] = useState<any[]>(INITIAL_TEAM);
   const [services, setServices] = useState<any[]>(INITIAL_SERVICES); 
-  const [clients, setClients] = useState<any[]>(INITIAL_CLIENTS); // Nuevo estado para clientes
+  const [clients, setClients] = useState<any[]>(INITIAL_CLIENTS);
   
   // Estado Ventas
   const [salesStats, setSalesStats] = useState({ total: 0, orders: 0 });
@@ -50,7 +50,7 @@ export default function AdminPanel() {
   const [editSpecialist, setEditSpecialist] = useState<any>(null); 
   const [productModal, setProductModal] = useState<any>(null); 
   const [serviceModal, setServiceModal] = useState<any>(null); 
-  const [marketingModal, setMarketingModal] = useState<any>(null); // Nuevo Modal Marketing
+  const [marketingModal, setMarketingModal] = useState<any>(null); 
   
   const [isCreating, setIsCreating] = useState(false);
 
@@ -163,7 +163,15 @@ export default function AdminPanel() {
       if (dataProd.success) setProducts(dataProd.data);
       if (dataTeam.success) setTeam(dataTeam.data);
       if (dataServ.success) setServices(dataServ.data);
-      if (dataClients.success) setClients(dataClients.data); // Guardar clientes
+      
+      // Procesar clientes y agregar campo lastSent localmente si no viene de la DB (simulación)
+      if (dataClients.success) {
+         const loadedClients = dataClients.data.map((c: any) => ({
+             ...c,
+             lastSent: c.lastSent || '-' // Campo para la fecha de último envío
+         }));
+         setClients(loadedClients);
+      }
 
       if (dataSales.success) {
         const salesData = dataSales.data;
@@ -297,8 +305,49 @@ export default function AdminPanel() {
 
   // --- FUNCIÓN ENVIAR MARKETING ---
   const handleSendMarketing = () => {
-      alert(`🎉 Promoción "${marketingModal.title}" enviada exitosamente a ${marketingModal.target === 'all' ? 'todos los clientes' : 'el cliente seleccionado'}.`);
+      // Validar selección
+      if (!marketingModal.selectedEmails || marketingModal.selectedEmails.length === 0) {
+          alert("⚠️ Por favor selecciona al menos un cliente.");
+          return;
+      }
+
+      const today = new Date().toLocaleDateString('es-VE');
+
+      // Actualizar fecha de último envío en local (simulación)
+      const updatedClients = clients.map(c => {
+          if (marketingModal.selectedEmails.includes(c.Email)) {
+              return { ...c, lastSent: today };
+          }
+          return c;
+      });
+      setClients(updatedClients);
+
+      alert(`🎉 Promoción "${marketingModal.title}" enviada a ${marketingModal.selectedEmails.length} clientes.`);
       setMarketingModal(null);
+  };
+
+  // Función para manejar la selección de clientes en el modal de marketing
+  const toggleClientSelection = (email: string) => {
+      if (!marketingModal) return;
+      const currentSelection = marketingModal.selectedEmails || [];
+      const isSelected = currentSelection.includes(email);
+      
+      let newSelection;
+      if (isSelected) {
+          newSelection = currentSelection.filter((e: string) => e !== email);
+      } else {
+          newSelection = [...currentSelection, email];
+      }
+      setMarketingModal({ ...marketingModal, selectedEmails: newSelection });
+  };
+
+  const toggleAllClients = () => {
+      if (!marketingModal) return;
+      const allSelected = marketingModal.selectedEmails?.length === clients.length;
+      setMarketingModal({ 
+          ...marketingModal, 
+          selectedEmails: allSelected ? [] : clients.map(c => c.Email) 
+      });
   };
 
   // --- RENDER ---
@@ -426,27 +475,29 @@ export default function AdminPanel() {
                 <div className="animate-in fade-in zoom-in duration-300">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className={`${cinzel.className} text-2xl text-[#191919]`}>Gestión de Clientes</h2>
-                        <button onClick={() => setMarketingModal({ type: 'all', title: 'Nueva Campaña', textColor: '#000000', bgColor: '#FFFFFF' })} className="bg-[#0a0a0a] text-white px-4 py-2 rounded-xl text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-[#D4AF37] transition-colors">
+                        <button onClick={() => setMarketingModal({ type: 'all', title: 'Nueva Campaña', textColor: '#FFFFFF', bgColor: '#000000', selectedEmails: [] })} className="bg-[#0a0a0a] text-white px-4 py-2 rounded-xl text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-[#D4AF37] transition-colors">
                             <Plus size={16} /> Crear Campaña
                         </button>
                     </div>
 
                     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                         <div className="grid grid-cols-12 bg-gray-50 p-3 text-[10px] uppercase font-bold text-gray-400 tracking-wider">
-                            <div className="col-span-5 md:col-span-4">Nombre</div>
-                            <div className="col-span-5 md:col-span-6">Email</div>
-                            <div className="col-span-2 text-right">Acción</div>
+                             <div className="col-span-1 text-center"></div> {/* Checkbox header */}
+                            <div className="col-span-3">Nombre</div>
+                            <div className="col-span-5">Email</div>
+                            <div className="col-span-3 text-right">Último Envío</div>
                         </div>
                         {clients.length > 0 ? (
                             clients.map((client, idx) => (
                                 <div key={idx} className="grid grid-cols-12 p-4 border-b border-gray-50 items-center text-sm hover:bg-gray-50/50 transition-colors">
-                                    <div className="col-span-5 md:col-span-4 font-medium text-[#191919] truncate pr-2">{client.Nombre}</div>
-                                    <div className="col-span-5 md:col-span-6 text-gray-500 truncate pr-2">{client.Email}</div>
-                                    <div className="col-span-2 flex justify-end">
-                                        <button onClick={() => setMarketingModal({ type: 'single', client, title: `Hola ${client.Nombre}`, textColor: '#000000', bgColor: '#FFFFFF' })} className="p-2 bg-[#D4AF37]/10 text-[#D4AF37] rounded-lg hover:bg-[#D4AF37] hover:text-white transition-colors">
-                                            <Gift size={16} />
-                                        </button>
-                                    </div>
+                                     <div className="col-span-1 text-center">
+                                         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs font-bold">
+                                             {client.Nombre?.charAt(0)}
+                                         </div>
+                                     </div>
+                                    <div className="col-span-3 font-medium text-[#191919] truncate pr-2">{client.Nombre}</div>
+                                    <div className="col-span-5 text-gray-500 truncate pr-2">{client.Email}</div>
+                                    <div className="col-span-3 text-right text-xs text-gray-400">{client.lastSent || '-'}</div>
                                 </div>
                             ))
                         ) : (
@@ -547,10 +598,38 @@ export default function AdminPanel() {
                         {/* MODAL MARKETING (NUEVO) */}
                         {marketingModal && (
                             <div className="space-y-6">
+                                {/* SELECCION DE USUARIOS */}
+                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <label className="text-[10px] uppercase font-bold text-gray-500">Destinatarios</label>
+                                        <button onClick={toggleAllClients} className="text-[10px] text-[#D4AF37] font-bold underline">
+                                            {marketingModal.selectedEmails?.length === clients.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
+                                        </button>
+                                    </div>
+                                    <div className="max-h-32 overflow-y-auto space-y-1">
+                                        {clients.map((client, i) => {
+                                            const isSelected = marketingModal.selectedEmails?.includes(client.Email);
+                                            return (
+                                                <div key={i} onClick={() => toggleClientSelection(client.Email)} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer text-xs ${isSelected ? 'bg-white border border-[#D4AF37]/30 shadow-sm' : 'hover:bg-gray-100'}`}>
+                                                    {isSelected ? <CheckCircle size={14} className="text-[#D4AF37]" /> : <div className="w-3.5 h-3.5 border border-gray-300 rounded-sm"></div>}
+                                                    <span className={isSelected ? 'font-medium text-[#191919]' : 'text-gray-500'}>{client.Nombre}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-[9px] text-right mt-2 text-gray-400">{marketingModal.selectedEmails?.length || 0} seleccionados</p>
+                                </div>
+
                                 {/* VISUALIZADOR */}
                                 <div 
                                     className="w-full h-48 rounded-2xl flex flex-col items-center justify-center text-center p-6 shadow-md relative overflow-hidden transition-all duration-300"
-                                    style={{ backgroundColor: marketingModal.bgColor, color: marketingModal.textColor }}
+                                    style={{ 
+                                        backgroundColor: marketingModal.bgColor, 
+                                        color: marketingModal.textColor,
+                                        background: marketingModal.gradientColor 
+                                            ? `linear-gradient(135deg, ${marketingModal.bgColor}, ${marketingModal.gradientColor})` 
+                                            : marketingModal.bgColor
+                                    }}
                                 >
                                     {marketingModal.imageUrl && (
                                         <div className="absolute inset-0 opacity-20">
@@ -569,17 +648,21 @@ export default function AdminPanel() {
                                     
                                     <div className="flex gap-4">
                                         <div className="flex-1 flex flex-col gap-2">
-                                            <label className="text-[10px] uppercase font-bold text-gray-400">Fondo</label>
+                                            <label className="text-[10px] uppercase font-bold text-gray-400">Color 1</label>
                                             <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-xl">
-                                                <Palette size={16} className="text-gray-400"/>
-                                                <input type="color" value={marketingModal.bgColor} onChange={e => setMarketingModal({...marketingModal, bgColor: e.target.value})} className="w-full h-6 bg-transparent cursor-pointer" />
+                                                <input type="color" value={marketingModal.bgColor} onChange={e => setMarketingModal({...marketingModal, bgColor: e.target.value})} className="w-full h-8 bg-transparent cursor-pointer rounded" />
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 flex flex-col gap-2">
+                                            <label className="text-[10px] uppercase font-bold text-gray-400">Color 2 (Degradado)</label>
+                                            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-xl">
+                                                <input type="color" value={marketingModal.gradientColor || '#ffffff'} onChange={e => setMarketingModal({...marketingModal, gradientColor: e.target.value})} className="w-full h-8 bg-transparent cursor-pointer rounded" />
                                             </div>
                                         </div>
                                         <div className="flex-1 flex flex-col gap-2">
                                             <label className="text-[10px] uppercase font-bold text-gray-400">Texto</label>
                                             <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-xl">
-                                                <Palette size={16} className="text-gray-400"/>
-                                                <input type="color" value={marketingModal.textColor} onChange={e => setMarketingModal({...marketingModal, textColor: e.target.value})} className="w-full h-6 bg-transparent cursor-pointer" />
+                                                <input type="color" value={marketingModal.textColor} onChange={e => setMarketingModal({...marketingModal, textColor: e.target.value})} className="w-full h-8 bg-transparent cursor-pointer rounded" />
                                             </div>
                                         </div>
                                     </div>
@@ -590,16 +673,12 @@ export default function AdminPanel() {
                                             <ImageIcon size={16} className="text-gray-400"/>
                                             <input className="bg-transparent w-full text-xs outline-none" placeholder="https://..." value={marketingModal.imageUrl || ''} onChange={e => setMarketingModal({...marketingModal, imageUrl: e.target.value})} />
                                         </div>
-                                        <p className="text-[9px] text-gray-400 mt-1 pl-1">Recomendado: 600x300px. Sube tu imagen a Drive o Imgur.</p>
                                     </div>
                                 </div>
 
                                 <div className="flex gap-3 pt-4 border-t border-gray-100">
                                     <button onClick={handleSendMarketing} className="flex-1 py-4 bg-[#0a0a0a] text-white rounded-xl text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 hover:bg-[#D4AF37] transition-colors">
-                                        <MailIcon size={16} /> Enviar Email
-                                    </button>
-                                    <button onClick={handleSendMarketing} className="flex-1 py-4 bg-white border border-gray-200 text-[#0a0a0a] rounded-xl text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 hover:bg-gray-50">
-                                        <Send size={16} /> Publicar
+                                        <MailIcon size={16} /> Enviar
                                     </button>
                                 </div>
                             </div>
