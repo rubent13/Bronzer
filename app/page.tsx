@@ -1,21 +1,20 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-// AGREGADO: useMotionValue y useTransform para el efecto 3D
+// ELIMINADO: import Image from 'next/image'; -> Usaremos <img> nativo
+// ELIMINADO: import { Cinzel, Montserrat } from 'next/font/google'; -> Usaremos CSS
 import { motion, AnimatePresence, Variants, useMotionValue, useTransform } from 'framer-motion';
 import { 
   ArrowRight, Star, Clock, MapPin, 
   ShoppingBag, X, Check, Phone, Instagram, Mail,
   Trash2, User, Calendar as CalIcon, ArrowLeft,
-  // NUEVO: Iconos para banner y cupones
   Gift, Sparkles, Tag, Percent
 } from 'lucide-react';
-import { Cinzel, Montserrat } from 'next/font/google';
 
-// --- FUENTES ---
-const cinzel = Cinzel({ subsets: ['latin'], weight: ['400', '500', '600'] });
-const montserrat = Montserrat({ subsets: ['latin'], weight: ['300', '400', '500'] });
+// --- FUENTES (SIMULACIÓN PARA MANTENER TU ESTRUCTURA) ---
+// En React puro usamos CSS. Definimos estos objetos para no romper tu lógica de clases.
+const cinzel = { className: 'font-cinzel' };
+const montserrat = { className: 'font-montserrat' };
 
 // --- ESTILOS (Colores Actualizados: Bronce #96765A, Crema #E9E0D5, Negro #191919) ---
 const GLASS_STYLE = "rounded-full bg-white/5 backdrop-blur-[24px] border-[0.5px] border-white/30 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_inset_0_0_20px_rgba(255,255,255,0.15),_0_8px_20px_-8px_rgba(0,0,0,0.2)] text-[#191919] font-bold tracking-widest hover:scale-105 hover:bg-white/15 hover:border-white/50 hover:shadow-[inset_0_4px_10px_rgba(255,255,255,1),_inset_0_0_30px_rgba(255,255,255,0.3),_0_15px_30px_-10px_rgba(0,0,0,0.3)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]";
@@ -153,8 +152,8 @@ const CartDrawer: React.FC<{
         {/* Header del Carrito */}
         <div className="flex justify-between items-center p-6 border-b border-[#96765A]/20">
           <h3 className={`${cinzel.className} text-xl flex items-center gap-2 text-[#191919]`}>
-             {view === 'checkout' && <button onClick={() => setView('cart')} className="mr-2"><ArrowLeft size={18}/></button>}
-             {view === 'cart' ? `Tu Bolsa (${cart.length})` : 'Finalizar Compra'}
+              {view === 'checkout' && <button onClick={() => setView('cart')} className="mr-2"><ArrowLeft size={18}/></button>}
+              {view === 'cart' ? `Tu Bolsa (${cart.length})` : 'Finalizar Compra'}
           </h3>
           <button onClick={onClose} className="hover:text-[#96765A] p-2 text-[#191919]"><X size={24} /></button>
         </div>
@@ -1292,6 +1291,11 @@ export default function BronzerFullPlatform() {
   if (showFullShop) {
       return (
         <div className={`bg-[#E9E0D5] min-h-screen text-[#191919] ${montserrat.className}`}>
+            <style jsx global>{`
+              @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Montserrat:wght@300;400;500&display=swap');
+              .font-cinzel { font-family: 'Cinzel', serif; }
+              .font-montserrat { font-family: 'Montserrat', sans-serif; }
+            `}</style>
             <header className="fixed top-0 w-full z-50 bg-[#E9E0D5]/90 backdrop-blur-xl border-b border-[#96765A]/10 shadow-sm">
                 <div className="container mx-auto px-6 h-16 md:h-20 flex justify-between items-center">
                     <button onClick={() => setShowFullShop(false)} className="flex items-center gap-2 text-xs md:text-sm hover:text-[#96765A] transition-colors uppercase tracking-widest">
@@ -1329,7 +1333,7 @@ export default function BronzerFullPlatform() {
                     })}
                 </div>
             </main>
-           
+            
             {/* AQUÍ AGREGAMOS LA PROPIEDAD onCheckout */}
             {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} />}
         </div>
@@ -1339,6 +1343,11 @@ export default function BronzerFullPlatform() {
   // --- MODO LANDING PAGE (RESPONSIVE FIX) ---
   return (
     <div className={`bg-[#E9E0D5] min-h-screen text-[#191919] ${montserrat.className} selection:bg-[#96765A] selection:text-[#E9E0D5] ${showSplash ? 'overflow-hidden h-screen' : ''}`}>
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Montserrat:wght@300;400;500&display=swap');
+        .font-cinzel { font-family: 'Cinzel', serif; }
+        .font-montserrat { font-family: 'Montserrat', sans-serif; }
+      `}</style>
       
       <AnimatePresence mode="wait">
         {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
@@ -1577,7 +1586,7 @@ export default function BronzerFullPlatform() {
       </section>
 
       <section className="relative h-[50vh] md:h-[80vh] w-full">
-        <Image src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=2070&auto=format&fit=crop" alt="Spa Interior" fill className="object-cover" />
+        <img src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=2070&auto=format&fit=crop" alt="Spa Interior" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-[#191919]/10 flex items-center justify-center text-center">
           <div className="bg-[#E9E0D5]/70 backdrop-blur-lg p-8 md:p-12 max-w-sm md:max-w-xl rounded-3xl border border-white/40 shadow-2xl mx-4">
             <h3 className={`${cinzel.className} text-2xl md:text-3xl mb-4 text-[#191919]`}>Visítanos</h3>
