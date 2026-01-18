@@ -1,25 +1,25 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-// AGREGADO: useMotionValue y useTransform para el efecto 3D
+// import Image from 'next/image'; // DESACTIVADO: Usamos <img> estándar para evitar errores
 import { motion, AnimatePresence, Variants, useMotionValue, useTransform } from 'framer-motion';
 import { 
   ArrowRight, Star, Clock, MapPin, 
   ShoppingBag, X, Check, Phone, Instagram, Mail,
   Trash2, User, Calendar as CalIcon, ArrowLeft 
 } from 'lucide-react';
-import { Cinzel, Montserrat } from 'next/font/google';
+// import { Cinzel, Montserrat } from 'next/font/google'; // DESACTIVADO PARA EVITAR ERROR DE BUILD
 
-// --- FUENTES ---
-const cinzel = Cinzel({ subsets: ['latin'], weight: ['400', '500', '600'] });
-const montserrat = Montserrat({ subsets: ['latin'], weight: ['300', '400', '500'] });
+// --- FUENTES SIMULADAS (Para evitar error de build) ---
+// Usamos clases estándar de Tailwind que se verán bien en cualquier navegador
+const cinzel = { className: 'font-serif' }; 
+const montserrat = { className: 'font-sans' };
 
-// --- ESTILOS (Colores Actualizados: Bronce #96765A, Crema #E9E0D5, Negro #191919) ---
-const GLASS_STYLE = "rounded-full bg-white/5 backdrop-blur-[24px] border-[0.5px] border-white/30 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_inset_0_0_20px_rgba(255,255,255,0.15),_0_8px_20px_-8px_rgba(0,0,0,0.2)] text-[#191919] font-bold tracking-widest hover:scale-105 hover:bg-white/15 hover:border-white/50 hover:shadow-[inset_0_4px_10px_rgba(255,255,255,1),_inset_0_0_30px_rgba(255,255,255,0.3),_0_15px_30px_-10px_rgba(0,0,0,0.3)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]";
-const GLASS_DARK_STYLE = "rounded-full bg-[#191919]/5 backdrop-blur-[24px] border-[0.5px] border-white/40 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),_inset_0_-2px_4px_rgba(0,0,0,0.1),_0_8px_20px_-8px_rgba(0,0,0,0.25)] text-[#191919] font-bold tracking-widest hover:scale-105 hover:bg-[#191919]/10 hover:border-white/60 hover:shadow-[inset_0_4px_10px_rgba(255,255,255,1),_inset_0_-4px_8px_rgba(0,0,0,0.15),_0_15px_30px_-10px_rgba(0,0,0,0.35)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]";
+// --- ESTILOS ---
+const GLASS_STYLE = "rounded-full bg-white/10 backdrop-blur-[24px] border-[0.5px] border-[#96765A]/30 shadow-[inset_0_2px_4px_rgba(255,255,255,0.5),_0_4px_10px_rgba(0,0,0,0.05)] text-[#191919] font-bold tracking-widest hover:scale-105 hover:bg-[#E9E0D5]/40 hover:border-[#96765A] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]";
+const GLASS_DARK_STYLE = "rounded-full bg-[#191919] backdrop-blur-[24px] border-[0.5px] border-[#96765A]/50 text-[#E9E0D5] font-bold tracking-widest hover:scale-105 hover:bg-[#2B2B2B] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]";
 
-// --- Types for demo data ---
+// --- Types ---
 interface Product {
   id: number;
   name: string;
@@ -87,7 +87,7 @@ const getNextDays = () => {
   return days;
 };
 
-// --- FUNCIÓN PARA PROCESAR IMÁGENES (DRIVE + UNSPLASH) ---
+// --- FUNCIÓN PARA PROCESAR IMÁGENES ---
 const processGoogleImage = (url?: string | null): string | null => {
     if (!url || typeof url !== 'string') return null;
     let id: string | null = null;
@@ -95,7 +95,7 @@ const processGoogleImage = (url?: string | null): string | null => {
         const matchD = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
         if (matchD && matchD[1]) id = matchD[1];
         else { const matchId = url.match(/id=([a-zA-Z0-9_-]+)/); if (matchId && matchId[1]) id = matchId[1]; }
-        if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w600`;
+        if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=600`;
     }
     return url;
 };
@@ -104,21 +104,17 @@ const processGoogleImage = (url?: string | null): string | null => {
 const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   const [animationFinished, setAnimationFinished] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => { setAnimationFinished(true); setTimeout(onComplete, 1000); }, 3500); 
+    const timer = setTimeout(() => { setAnimationFinished(true); onComplete(); }, 2500); 
     return () => clearTimeout(timer);
   }, [onComplete]);
 
-  const containerVariants: Variants = { exit: { y: "-100vh", transition: { duration: 0.8, ease: [0.42, 0, 0.58, 1] } } };
-  const textVariants: Variants = { hidden: { opacity: 0, scale: 0.9, filter: "blur(10px)" }, visible: { opacity: 1, scale: 1, filter: "blur(0px)", transition: { duration: 1.2, ease: [0.22, 1, 0.36, 1] } } };
-  const dotVariants: Variants = { hidden: { scale: 0, opacity: 0 }, visible: { scale: 1, opacity: 1, transition: { delay: 1, type: "spring", stiffness: 200, damping: 10 } } };
-
   return (
-    <motion.div variants={containerVariants} exit="exit" className="fixed inset-0 z-[100] bg-[#E9E0D5] flex flex-col items-center justify-center overflow-hidden">
-       <div className="absolute inset-0 bg-gradient-to-tr from-white via-[#E9E0D5] to-[#96765A]/5 opacity-50 animate-pulse-slow"></div>
+    <motion.div exit={{ y: "-100vh", transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] } }} className="fixed inset-0 z-[100] bg-[#FAF9F6] flex flex-col items-center justify-center overflow-hidden">
+       <div className="absolute inset-0 bg-gradient-to-tr from-white via-[#E9E0D5]/30 to-[#96765A]/10 opacity-50 animate-pulse-slow"></div>
       <motion.div className="relative z-10 flex flex-col items-center p-4 text-center">
-        <motion.h1 variants={textVariants} initial="hidden" animate="visible" className={`${cinzel.className} text-4xl md:text-5xl lg:text-7xl tracking-[0.2em] font-bold text-[#191919] flex items-end gap-2 md:gap-3 drop-shadow-sm`}>
+        <motion.h1 initial={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} transition={{ duration: 1.2 }} className={`${cinzel.className} text-4xl md:text-5xl lg:text-7xl tracking-[0.2em] font-bold text-[#191919] flex items-end gap-2 md:gap-3 drop-shadow-sm`}>
           BRONZER
-          <motion.div variants={dotVariants} initial="hidden" animate="visible" className="w-3 h-3 md:w-4 md:h-4 lg:w-5 lg:h-5 bg-[#96765A] rounded-full mb-2 md:mb-3 shadow-[0_0_20px_rgba(150,118,90,0.6)] relative">
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1, type: "spring" }} className="w-3 h-3 md:w-4 md:h-4 lg:w-5 lg:h-5 bg-[#96765A] rounded-full mb-2 md:mb-3 shadow-[0_0_20px_rgba(150,118,90,0.6)] relative">
              <div className="absolute inset-0 bg-white/40 rounded-full animate-ping-slow opacity-50"></div>
           </motion.div>
         </motion.h1>
@@ -130,7 +126,165 @@ const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   );
 };
 
-// --- COMPONENTE CARRITO CON CHECKOUT ---
+// --- COMPONENTE CARRUSEL 3D (OPTIMIZADO Y SEGURO) ---
+const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[], addToCart: (p: any) => void, onViewAll: () => void }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
+
+  // Auto-play seguro
+  useEffect(() => {
+    if (!products || products.length === 0) return;
+    const timer = setInterval(() => {
+      nextSlide();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [currentIndex, products]);
+
+  const nextSlide = () => {
+    if (!products || products.length === 0) return;
+    setDirection(1);
+    setCurrentIndex((prev) => (prev === products.length - 1 ? 0 : prev + 1));
+  };
+
+  const prevSlide = () => {
+    if (!products || products.length === 0) return;
+    setDirection(-1);
+    setCurrentIndex((prev) => (prev === 0 ? products.length - 1 : prev - 1));
+  };
+
+  const slideVariants: Variants = {
+    enter: (direction: number) => ({ x: direction > 0 ? 1000 : -1000, opacity: 0, scale: 0.8 }),
+    center: { zIndex: 1, x: 0, opacity: 1, scale: 1, transition: { duration: 0.8, ease: "easeOut" } },
+    exit: (direction: number) => ({ zIndex: 0, x: direction < 0 ? 1000 : -1000, opacity: 0, scale: 0.8, transition: { duration: 0.6 } })
+  };
+
+  // --- LÓGICA DE SEGUIMIENTO DE MOUSE 3D ---
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const rotateX = useTransform(y, [-100, 100], [15, -15]); 
+  const rotateY = useTransform(x, [-100, 100], [-15, 15]); 
+  
+  function handleMouse(event: React.MouseEvent) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    const xPct = (mouseX / width - 0.5) * 200; 
+    const yPct = (mouseY / height - 0.5) * 200;
+    x.set(xPct);
+    y.set(yPct);
+  }
+
+  function handleMouseLeave() { x.set(0); y.set(0); }
+
+  // --- VALIDACIÓN DE SEGURIDAD ---
+  const currentProduct = products && products.length > 0 ? products[currentIndex] : null;
+
+  if (!currentProduct) {
+      return (
+          <div className="w-full h-[50vh] flex items-center justify-center bg-[#E9E0D5]">
+              <div className="text-[#96765A] animate-pulse uppercase tracking-widest text-xs font-bold">Cargando Boutique...</div>
+          </div>
+      );
+  }
+
+  const imgUrl = processGoogleImage(currentProduct.img);
+
+  return (
+    <div className="w-full h-auto md:min-h-[700px] relative flex flex-col items-center justify-center overflow-hidden py-12 md:py-0 bg-[#E9E0D5]">
+      
+      {/* Botón Ver Todo */}
+      <div className="absolute top-4 right-4 md:top-8 md:right-8 z-40">
+          <button onClick={onViewAll} className={`flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-[10px] md:text-xs uppercase tracking-widest ${GLASS_STYLE} bg-white/40`}>
+              Ver Todo <ArrowRight size={14} />
+          </button>
+      </div>
+
+      {/* Fondo Dinámico */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center overflow-hidden">
+          <motion.h1 
+            key={currentProduct.id}
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 0.1 }}
+            exit={{ y: -100, opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            className={`${cinzel.className} text-[18vw] md:text-[15vw] leading-none font-bold text-[#96765A] whitespace-nowrap uppercase`}
+          >
+            BRONZER
+          </motion.h1>
+        </div>
+        <div className="absolute top-0 right-0 w-full md:w-3/4 h-full bg-gradient-to-b md:bg-gradient-to-l from-white/40 to-transparent"></div>
+      </div>
+
+      <div className="container mx-auto px-6 relative z-10 w-full flex flex-col items-center">
+        
+        {/* AREA DEL SLIDER */}
+        <div className="w-full h-[500px] md:h-full flex items-center justify-center relative mb-8 md:mb-0">
+            <AnimatePresence initial={false} custom={direction} mode="wait">
+            <motion.div
+                key={currentIndex}
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="w-full flex flex-col md:flex-row items-center justify-between gap-6 md:gap-12 absolute md:relative top-0 md:top-auto"
+            >
+                {/* INFO */}
+                <div className="w-full md:w-1/2 text-left space-y-4 md:pl-12 order-2 md:order-1 relative z-20 mt-4 md:mt-0">
+                    <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+                        <span className="inline-block py-1 px-3 border border-[#96765A] rounded-full text-[9px] md:text-[10px] uppercase tracking-widest text-[#96765A] mb-2 md:mb-4">Destacado</span>
+                        <h2 className={`${cinzel.className} text-3xl md:text-6xl text-[#191919] leading-tight`}>{currentProduct.name}</h2>
+                        <p className="text-[#6D6D6D] text-xs md:text-base max-w-md mt-2 md:mt-4 leading-relaxed font-light line-clamp-3 md:line-clamp-none">{currentProduct.description || "Lujo y pureza para tu piel."}</p>
+                        <div className="flex items-center gap-4 md:gap-6 mt-6 md:mt-8">
+                            <p className={`${cinzel.className} text-2xl md:text-3xl text-[#96765A]`}>€{Number(currentProduct.price).toFixed(2)}</p>
+                            <button onClick={() => addToCart(currentProduct)} className={`px-6 py-3 md:px-8 md:py-4 bg-[#191919] text-[#E9E0D5] text-[10px] md:text-xs uppercase tracking-[0.2em] rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-2`}>
+                            Agregar <ShoppingBag size={16}/>
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+
+                {/* IMAGEN 3D */}
+                <motion.div 
+                className="w-full md:w-1/2 h-[300px] md:h-[600px] flex items-center justify-center perspective-1000 cursor-pointer order-1 md:order-2"
+                onMouseMove={handleMouse}
+                onMouseLeave={handleMouseLeave}
+                whileHover={{ scale: 1.05 }}
+                >
+                    <motion.div style={{ rotateX, rotateY, x, y }} className="relative w-full max-w-[280px] md:max-w-md aspect-square">
+                        <div className="absolute inset-0 bg-[#96765A]/20 rounded-full blur-3xl scale-75 transform translate-y-10 -z-10"></div>
+                        {imgUrl && <img src={imgUrl} alt={currentProduct.name} className="w-full h-full object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.3)] md:drop-shadow-[0_35px_35px_rgba(0,0,0,0.4)]" />}
+                    </motion.div>
+                </motion.div>
+
+            </motion.div>
+            </AnimatePresence>
+        </div>
+
+        {/* CONTROLES */}
+        <div className="relative md:absolute mt-8 md:mt-0 md:bottom-10 left-auto md:left-1/2 md:-translate-x-1/2 flex items-center gap-6 md:gap-8 z-30">
+            <button onClick={prevSlide} className="p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowLeft size={18}/></button>
+            <div className="flex gap-2">
+                {products.slice(0, 5).map((_, idx) => (
+                    <div 
+                    key={idx} 
+                    onClick={() => { setDirection(idx > currentIndex ? 1 : -1); setCurrentIndex(idx); }}
+                    className={`h-1 cursor-pointer transition-all duration-300 rounded-full ${idx === currentIndex ? 'w-8 bg-[#191919]' : 'w-2 bg-[#191919]/30'}`}
+                    />
+                ))}
+            </div>
+            <button onClick={nextSlide} className="p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowRight size={18}/></button>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+// --- COMPONENTE CARRITO ---
 const CartDrawer: React.FC<{
   onClose: () => void;
   cart: Array<{ id?: number; name: string; price: number; img?: string | null }>;
@@ -148,7 +302,6 @@ const CartDrawer: React.FC<{
       <div onClick={onClose} className="fixed inset-0 z-[60] bg-[#191919]/20 backdrop-blur-[2px]"></div>
       <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed top-0 right-0 z-[70] h-screen w-full md:w-[450px] bg-[#E9E0D5]/95 backdrop-blur-xl shadow-2xl flex flex-col border-l border-white/50">
         
-        {/* Header del Carrito */}
         <div className="flex justify-between items-center p-6 border-b border-[#96765A]/20">
           <h3 className={`${cinzel.className} text-xl flex items-center gap-2 text-[#191919]`}>
              {view === 'checkout' && <button onClick={() => setView('cart')} className="mr-2"><ArrowLeft size={18}/></button>}
@@ -157,7 +310,6 @@ const CartDrawer: React.FC<{
           <button onClick={onClose} className="hover:text-[#96765A] p-2 text-[#191919]"><X size={24} /></button>
         </div>
 
-        {/* VISTA 1: LISTA DE PRODUCTOS */}
         {view === 'cart' && (
             <>
                 <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
@@ -190,7 +342,6 @@ const CartDrawer: React.FC<{
             </>
         )}
 
-        {/* VISTA 2: PAGO (CHECKOUT) */}
         {view === 'checkout' && (
             <div className="flex-1 overflow-y-auto p-6 flex flex-col">
                 <div className="space-y-4 mb-6">
@@ -242,7 +393,7 @@ const CartDrawer: React.FC<{
   );
 };
 
-// --- COMPONENTE MODAL RESERVA (RESPONSIVE & FILTRADO) ---
+// --- COMPONENTE MODAL RESERVA ---
 interface BookingModalProps {
   onClose: () => void;
   step: number;
@@ -260,10 +411,10 @@ interface BookingModalProps {
   isSubmitting: boolean;
   saveToDatabase: (extraData: Record<string, unknown>) => void;
   specialistsList: Array<any>;
-  existingBookings: any[]; // <-- NUEVO: Recibe las citas existentes
+  existingBookings: any[]; // Propiedad para citas existentes
 }
 
-const BookingModal: React.FC<BookingModalProps> = ({
+const BookingModal: React.FC<BookingModalProps> = ({ 
   onClose, step, setStep, 
   selectedSpecialist, setSelectedSpecialist, 
   selectedService, setSelectedService, 
@@ -271,14 +422,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
   selectedTime, setSelectedTime,
   clientData, setClientData,
   isSubmitting, saveToDatabase, specialistsList,
-  existingBookings // <-- NUEVO
-}) => {
+  existingBookings = [] 
+}: any) => {
 
   const [paymentMethod, setPaymentMethod] = useState('pago_movil'); 
   const [paymentRef, setPaymentRef] = useState('');
 
   const filteredSpecialists = selectedService
-    ? specialistsList.filter((spec) => {
+    ? specialistsList.filter((spec: any) => {
         if (!selectedService.specialists || String(selectedService.specialists).trim() === "") {
              return true;
         }
@@ -289,231 +440,120 @@ const BookingModal: React.FC<BookingModalProps> = ({
         return serviceSpecs.includes(specName);
       })
     : specialistsList; 
+  
+  // --- LÓGICA DE BLOQUEO DE HORARIO ---
+  const isTimeSlotTaken = (time: string) => {
+    if (!selectedSpecialist) return false;
+    
+    // Verifica si hay una cita que coincida en FECHA, HORA y ESPECIALISTA
+    return existingBookings.some((booking: any) => 
+       booking.date === selectedDate && 
+       booking.time.includes(time) && 
+       booking.specialist?.toLowerCase().trim() === selectedSpecialist.name.toLowerCase().trim()
+    );
+  };
+  // -------------------------------------
 
   return (
   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-[#191919]/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div className="bg-[#E9E0D5]/95 backdrop-blur-xl w-full max-w-4xl max-h-[90vh] md:h-[600px] shadow-2xl overflow-hidden flex flex-col md:flex-row rounded-3xl relative border border-white/50">
       <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-[#191919] z-20"><X size={24} /></button>
       
-      {/* SIDEBAR PASOS (Oculto en móvil) */}
+      {/* SIDEBAR PASOS */}
       <div className="w-full md:w-1/3 bg-white/40 p-6 md:p-8 flex-col justify-between border-b md:border-b-0 md:border-r border-[#96765A]/10 hidden md:flex">
         <div>
           <h3 className={`${cinzel.className} text-xl md:text-2xl mb-6 text-[#191919]`}>Tu Cita</h3>
           <div className="space-y-4 md:space-y-6">
-             <div className={`flex items-center gap-3 ${step >= 1 ? 'text-[#191919]' : 'text-gray-400'}`}><div className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-current flex items-center justify-center text-[10px] md:text-xs shadow-sm bg-white/50">1</div><span className="text-[10px] md:text-xs uppercase tracking-widest">Especialista</span></div>
-             <div className={`flex items-center gap-3 ${step >= 2 ? 'text-[#191919]' : 'text-gray-400'}`}><div className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-current flex items-center justify-center text-[10px] md:text-xs shadow-sm bg-white/50">2</div><span className="text-[10px] md:text-xs uppercase tracking-widest">Fecha & Hora</span></div>
-             <div className={`flex items-center gap-3 ${step >= 3 ? 'text-[#191919]' : 'text-gray-400'}`}><div className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-current flex items-center justify-center text-[10px] md:text-xs shadow-sm bg-white/50">3</div><span className="text-[10px] md:text-xs uppercase tracking-widest">Tus Datos</span></div>
-             <div className={`flex items-center gap-3 ${step >= 4 ? 'text-[#191919]' : 'text-gray-400'}`}><div className="w-6 h-6 md:w-8 md:h-8 rounded-full border border-current flex items-center justify-center text-[10px] md:text-xs shadow-sm bg-white/50">4</div><span className="text-[10px] md:text-xs uppercase tracking-widest">Confirmar</span></div>
+             <div className={`flex items-center gap-3 ${step >= 1 ? 'text-[#191919]' : 'text-gray-400'}`}><div className={`w-6 h-6 md:w-8 md:h-8 rounded-full border border-current flex items-center justify-center text-[10px] md:text-xs shadow-sm ${step >= 1 ? 'bg-[#96765A] text-white border-transparent' : 'bg-white'}`}>1</div><span className="text-[10px] md:text-xs uppercase tracking-widest">Especialista</span></div>
+             <div className={`flex items-center gap-3 ${step >= 2 ? 'text-[#191919]' : 'text-gray-400'}`}><div className={`w-6 h-6 md:w-8 md:h-8 rounded-full border border-current flex items-center justify-center text-[10px] md:text-xs shadow-sm ${step >= 2 ? 'bg-[#96765A] text-white border-transparent' : 'bg-white'}`}>2</div><span className="text-[10px] md:text-xs uppercase tracking-widest">Fecha & Hora</span></div>
+             <div className={`flex items-center gap-3 ${step >= 3 ? 'text-[#191919]' : 'text-gray-400'}`}><div className={`w-6 h-6 md:w-8 md:h-8 rounded-full border border-current flex items-center justify-center text-[10px] md:text-xs shadow-sm ${step >= 3 ? 'bg-[#96765A] text-white border-transparent' : 'bg-white'}`}>3</div><span className="text-[10px] md:text-xs uppercase tracking-widest">Tus Datos</span></div>
+             <div className={`flex items-center gap-3 ${step >= 4 ? 'text-[#191919]' : 'text-gray-400'}`}><div className={`w-6 h-6 md:w-8 md:h-8 rounded-full border border-current flex items-center justify-center text-[10px] md:text-xs shadow-sm ${step >= 4 ? 'bg-[#96765A] text-white border-transparent' : 'bg-white'}`}>4</div><span className="text-[10px] md:text-xs uppercase tracking-widest">Confirmar</span></div>
           </div>
         </div>
-        {selectedSpecialist && (
-          <div className="bg-white/60 p-4 border border-white/50 shadow-sm rounded-2xl backdrop-blur-md mt-4 md:mt-0">
-            <p className="text-[10px] uppercase text-gray-500">Especialista</p>
-            <p className="font-medium text-sm text-[#191919]">{selectedSpecialist.name}</p>
-          </div>
-        )}
+        {selectedSpecialist && (<div className="bg-white/60 p-4 border border-white/50 shadow-sm rounded-2xl mt-4 md:mt-0"><p className="text-[10px] uppercase text-gray-500">Especialista</p><p className="font-medium text-sm text-[#191919]">{selectedSpecialist.name}</p></div>)}
       </div>
 
       <div className="w-full md:w-2/3 p-6 md:p-8 overflow-y-auto relative no-scrollbar">
-        
         {step === 1 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
             <h2 className={`${cinzel.className} text-xl md:text-2xl mb-2 text-[#191919]`}>Selecciona tu Experto</h2>
-            <p className="text-gray-500 text-sm mb-6">Elige al profesional para tu tratamiento.</p>
-            <div className="grid grid-cols-1 gap-3 md:gap-4">
-              
-              {filteredSpecialists.length > 0 ? (
-                  filteredSpecialists.map((spec) => {
-                    const imgUrl = processGoogleImage(spec.img);
-                    return (
-                    <div key={spec.id} onClick={() => { setSelectedSpecialist(spec); setStep(2); }} className="flex items-center gap-4 p-3 border border-white/50 rounded-2xl hover:border-[#96765A]/50 hover:bg-white/60 hover:shadow-md cursor-pointer transition-all group bg-white/30">
-                      <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden relative grayscale group-hover:grayscale-0 transition-all border-2 border-white shadow-sm shrink-0">
-                        {imgUrl ? <img src={imgUrl} alt={spec.name} className="w-full h-full object-cover" /> : null}
-                      </div>
-                      <div>
-                          <h4 className="font-medium text-sm md:text-base text-[#191919]">{spec.name}</h4>
-                          <p className="text-[10px] md:text-xs text-[#96765A] uppercase">{spec.role}</p>
-                          {spec.schedule && <p className="text-[10px] text-gray-500 mt-0.5">{spec.schedule}</p>}
-                      </div>
-                      <ArrowRight className="ml-auto text-gray-300 group-hover:text-[#96765A]" size={18} />
-                    </div>
-                  )})
-              ) : (
-                  <div className="text-center py-10 text-gray-400 text-sm border border-dashed border-gray-300 rounded-2xl">
-                      No hay especialistas disponibles para este tratamiento.
-                  </div>
-              )}
-              
+            <div className="grid grid-cols-1 gap-3 md:gap-4 mt-6">
+              {filteredSpecialists.length > 0 ? (filteredSpecialists.map((spec: any) => { const imgUrl = processGoogleImage(spec.img); return (<div key={spec.id} onClick={() => { setSelectedSpecialist(spec); setStep(2); }} className="flex items-center gap-4 p-3 border border-[#E9E0D5] rounded-2xl hover:border-[#96765A]/50 hover:bg-white hover:shadow-md cursor-pointer transition-all group bg-white/50"><div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden relative border-2 border-white shadow-sm shrink-0">{imgUrl ? <img src={imgUrl} alt={spec.name} className="w-full h-full object-cover" /> : null}</div><div><h4 className="font-medium text-sm md:text-base text-[#191919]">{spec.name}</h4><p className="text-[10px] md:text-xs text-[#96765A] uppercase">{spec.role}</p>{spec.schedule && <p className="text-[10px] text-[#6D6D6D] mt-0.5">{spec.schedule}</p>}</div><ArrowRight className="ml-auto text-[#C8B29C] group-hover:text-[#96765A]" size={18} /></div>)})) : (<div className="text-center py-10 text-[#6D6D6D] text-sm border border-dashed border-[#E9E0D5] rounded-2xl">No hay especialistas disponibles.</div>)}
             </div>
           </motion.div>
         )}
 
         {step === 2 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <button onClick={() => setStep(1)} className="text-xs text-gray-400 underline mb-4">Volver</button>
+            <button onClick={() => setStep(1)} className="text-xs text-[#6D6D6D] underline mb-4">Volver</button>
             <h2 className={`${cinzel.className} text-xl md:text-2xl mb-6 text-[#191919]`}>Disponibilidad</h2>
             <div className="flex gap-2 overflow-x-auto pb-4 mb-6 no-scrollbar">
-              {getNextDays().map((day, i) => (
-                <button key={i} onClick={() => setSelectedDate(day.isoDate)} className={`min-w-[70px] h-20 rounded-2xl border flex flex-col items-center justify-center transition-all shadow-sm ${selectedDate === day.isoDate ? 'bg-[#191919] text-[#E9E0D5] border-[#191919] shadow-md scale-105' : 'border-white/50 bg-white/40 text-gray-500 hover:border-[#96765A]'}`}>
-                  <span className="text-xs uppercase">{day.dayName}</span><span className="text-xl font-serif">{day.date}</span>
-                </button>
-              ))}
+              {getNextDays().map((day, i) => (<button key={i} onClick={() => setSelectedDate(day.isoDate)} className={`min-w-[70px] h-20 rounded-2xl border flex flex-col items-center justify-center transition-all shadow-sm ${selectedDate === day.isoDate ? 'bg-[#191919] text-[#E9E0D5] border-[#191919] shadow-md scale-105' : 'border-[#E9E0D5] bg-white text-[#6D6D6D] hover:border-[#96765A]'}`}><span className="text-xs uppercase">{day.dayName}</span><span className="text-xl font-serif">{day.date}</span></button>))}
             </div>
-            <AnimatePresence>
-              {selectedDate && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                  <p className="text-xs uppercase tracking-widest mb-3 text-[#191919]">Horas Disponibles</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    {['09:00', '11:00', '14:30', '16:00', '17:30'].map(time => {
-                      // --- NUEVO: Verificar si el especialista ya tiene cita en esta fecha y hora ---
-                      const isBooked = existingBookings.some((booking: any) => 
-                        booking.specialist === selectedSpecialist?.name &&
-                        booking.date === selectedDate &&
-                        booking.time === time
-                      );
-                      
-                      return (
+            {selectedDate && (
+              <div className="grid grid-cols-3 gap-3 animate-in fade-in slide-in-from-bottom-2">
+                {['09:00', '11:00', '14:30', '16:00', '17:30'].map(time => {
+                    const taken = isTimeSlotTaken(time);
+                    return (
                         <button 
-                          key={time} 
-                          onClick={() => { 
-                            if (!isBooked) {
-                              setSelectedTime(time); 
-                              setStep(3); 
-                            }
-                          }} 
-                          disabled={isBooked} // Deshabilitar si está ocupado
-                          className={`py-2 text-sm transition-all ${
-                            isBooked 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' // Estilo ocupado
-                            : GLASS_STYLE.replace('py-3', '').replace('px-8','').replace('tracking-widest','') + ' hover:bg-white/20' // Estilo normal
-                          }`}
+                            key={time} 
+                            disabled={taken} 
+                            onClick={() => { setSelectedTime(time); setStep(3); }} 
+                            className={`py-2 text-sm rounded-full border transition-all ${taken ? 'bg-gray-200 text-gray-400 border-gray-200 cursor-not-allowed line-through' : 'border-[#E9E0D5] hover:bg-[#E9E0D5]/50 text-[#6D6D6D] cursor-pointer'}`}
                         >
-                          {time}
-                          {isBooked && <span className="block text-[8px] mt-1">OCUPADO</span>}
+                            {time}
                         </button>
-                      )
-                    })}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    );
+                })}
+              </div>
+            )}
           </motion.div>
         )}
 
         {step === 3 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <button onClick={() => setStep(2)} className="text-xs text-gray-400 underline mb-4">Volver</button>
+            <button onClick={() => setStep(2)} className="text-xs text-[#6D6D6D] underline mb-4">Volver</button>
             <h2 className={`${cinzel.className} text-xl md:text-2xl mb-2 text-[#191919]`}>Tus Datos</h2>
-            <p className="text-gray-500 text-sm mb-8">Necesitamos esta información para confirmar tu cita.</p>
-            <div className="space-y-4 md:space-y-6 max-w-sm w-full mx-auto md:mx-0">
-              <div><label className="text-xs uppercase tracking-widest text-gray-500 mb-2 block">Nombre Completo</label><input type="text" value={clientData.name} onChange={(e) => setClientData({...clientData, name: e.target.value})} className="w-full p-4 bg-white/60 border border-white/50 rounded-xl focus:border-[#96765A] focus:ring-0 outline-none transition-colors text-[#191919]" placeholder="Ej: María Pérez" autoFocus /></div>
-              <div><label className="text-xs uppercase tracking-widest text-gray-500 mb-2 block">Teléfono</label><input type="tel" value={clientData.phone} onChange={(e) => setClientData({...clientData, phone: e.target.value})} className="w-full p-4 bg-white/60 border border-white/50 rounded-xl focus:border-[#96765A] focus:ring-0 outline-none transition-colors text-[#191919]" placeholder="+58 412 000 0000" /></div>
-              <div><label className="text-xs uppercase tracking-widest text-gray-500 mb-2 block">Nota (Opcional)</label><textarea value={clientData.note} onChange={(e) => setClientData({...clientData, note: e.target.value})} className="w-full p-4 bg-white/60 border border-white/50 rounded-xl focus:border-[#96765A] focus:ring-0 outline-none transition-colors resize-none h-24 text-[#191919]" placeholder="Alergias, preferencias, etc..." /></div>
-              <button onClick={() => { if(clientData.name && clientData.phone) setStep(4); else alert("Por favor completa nombre y teléfono"); }} className={`w-full py-3 px-8 text-xs tracking-widest uppercase ${GLASS_DARK_STYLE}`}>Continuar</button>
+            <div className="space-y-4 md:space-y-6 max-w-sm w-full mx-auto md:mx-0 mt-6">
+              <div><input type="text" value={clientData.name} onChange={(e) => setClientData({...clientData, name: e.target.value})} className="w-full p-4 bg-white border border-[#E9E0D5] rounded-xl focus:border-[#96765A] outline-none text-[#191919]" placeholder="Nombre Completo" /></div>
+              <div><input type="tel" value={clientData.phone} onChange={(e) => setClientData({...clientData, phone: e.target.value})} className="w-full p-4 bg-white border border-[#E9E0D5] rounded-xl focus:border-[#96765A] outline-none text-[#191919]" placeholder="Teléfono" /></div>
+              <button onClick={() => { if(clientData.name && clientData.phone) setStep(4); else alert("Completa los datos"); }} className={`w-full py-3 px-8 text-xs tracking-widest uppercase ${GLASS_DARK_STYLE} text-white mt-4`}>Continuar</button>
             </div>
           </motion.div>
         )}
 
-        {/* PASO 4: CONFIRMACIÓN Y PAGO */}
         {step === 4 && (
           <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-8">
-            <button onClick={() => setStep(3)} className="text-xs text-gray-400 underline mb-2 self-start">Volver</button>
-            <h2 className={`${cinzel.className} text-xl md:text-2xl mb-4 text-[#191919]`}>Finalizar Reserva</h2>
+            <button onClick={() => setStep(3)} className="text-xs text-[#6D6D6D] underline mb-2 self-start">Volver</button>
+            <h2 className="font-cinzel text-2xl text-[#191919]">Confirmar y Pagar</h2>
             
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                {/* Resumen */}
-                <div className="bg-white/40 p-4 rounded-xl border border-white/50 mb-6 text-sm">
-                    <p className="font-bold text-base mb-2 text-[#191919]">{selectedService?.name || selectedService?.title}</p>
-                    <div className="flex justify-between text-gray-500 mb-1"><span>Especialista:</span> <span className="text-[#191919]">{selectedSpecialist.name}</span></div>
-                    <div className="flex justify-between text-gray-500 mb-1"><span>Fecha:</span> <span className="text-[#191919]">{selectedDate} - {selectedTime}</span></div>
-                    <div className="flex justify-between text-gray-500 border-t border-[#96765A]/20 pt-2 mt-2"><span>Total a Pagar:</span> <span className="text-[#96765A] font-bold">${selectedService?.price}</span></div>
-                </div>
-
-                {/* Selección de Pago */}
-                <h3 className="text-xs uppercase tracking-widest font-bold mb-3 text-gray-500">Método de Pago</h3>
-                <div className="grid grid-cols-3 gap-2 mb-6">
-                    {['pago_movil', 'binance', 'efectivo'].map(m => (
-                        <button 
-                            key={m} 
-                            onClick={() => setPaymentMethod(m)} 
-                            className={`py-3 text-[10px] md:text-xs uppercase tracking-wider border rounded-xl transition-all ${paymentMethod === m ? 'bg-[#191919] text-[#96765A] border-[#191919]' : 'bg-white/60 border-gray-200 text-gray-400 hover:border-gray-400'}`}
-                        >
-                            {m.replace('_', ' ')}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Detalles del Pago */}
-                <div className="bg-white/60 border border-white/50 p-5 rounded-xl mb-6 shadow-sm text-[#191919]">
-                    {paymentMethod === 'pago_movil' && (
-                        <div className="text-sm space-y-2">
-                            <p className="font-bold text-gray-800">Datos Pago Móvil / Zelle:</p>
-                            <p className="text-gray-500">Banco: <span className="text-[#191919]">Banesco</span></p>
-                            <p className="text-gray-500">Tel: <span className="text-[#191919]">0412-123-4567</span></p>
-                            <p className="text-gray-500">CI/RIF: <span className="text-[#191919]">V-12345678</span></p>
-                            <p className="text-gray-500 mt-2 text-xs border-t pt-2">Zelle: <span className="text-[#191919] font-medium">pagos@bronzer.com</span></p>
-                        </div>
-                    )}
-                    {paymentMethod === 'binance' && (
-                        <div className="text-sm space-y-2">
-                            <p className="font-bold text-gray-800">Binance Pay:</p>
-                            <p className="text-gray-500">Pay ID: <span className="text-[#191919] font-mono bg-white px-2 py-1 rounded">123456789</span></p>
-                            <p className="text-gray-500">Email: <span className="text-[#191919]">binance@bronzer.com</span></p>
-                            <p className="text-[10px] text-[#96765A] mt-2">Recuerda seleccionar USDT</p>
-                        </div>
-                    )}
-                    {paymentMethod === 'efectivo' && (
-                        <div className="text-sm text-center py-4 text-gray-500">
-                            <p>Realizarás el pago directamente en nuestro mostrador el día de tu cita.</p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Input Referencia (Solo si no es efectivo) */}
-                {paymentMethod !== 'efectivo' && (
-                    <div className="mb-6">
-                        <label className="text-xs uppercase tracking-widest text-gray-500 mb-2 block">Número de Referencia / Comprobante</label>
-                        <input 
-                            type="text" 
-                            value={paymentRef} 
-                            onChange={(e) => setPaymentRef(e.target.value)} 
-                            className="w-full p-4 bg-white/60 border border-white/50 rounded-xl focus:border-[#96765A] outline-none text-[#191919]" 
-                            placeholder="Ej: 123456..." 
-                        />
-                    </div>
-                )}
+            <div className="bg-[#E9E0D5]/30 p-4 rounded-xl border border-[#E9E0D5] text-sm mb-4">
+                <p><strong>Servicio:</strong> {selectedService?.name || "General"}</p>
+                <p><strong>Especialista:</strong> {selectedSpecialist?.name}</p>
+                <p><strong>Fecha:</strong> {selectedDate} {selectedTime}</p>
+                <p className="mt-2 pt-2 border-t border-[#E9E0D5] text-[#96765A] font-bold text-lg">Total: €{selectedService?.price || 0}</p>
             </div>
 
-            <button 
-                onClick={() => {
-                    // Validar que ponga referencia si no es efectivo
-                    if(paymentMethod !== 'efectivo' && !paymentRef) {
-                        alert("Por favor ingresa el número de referencia del pago.");
-                        return;
-                    }
-                    // Enviamos los datos extra a la función de guardado
-                    saveToDatabase({ paymentMethod, paymentRef }); 
-                }} 
-                disabled={isSubmitting} 
-                className={`w-full py-4 text-xs tracking-widest uppercase ${GLASS_DARK_STYLE} disabled:opacity-50`}
-            >
+            <div className="grid grid-cols-2 gap-2 mb-2">
+                {['pago_movil', 'binance'].map(m => (
+                    <button key={m} onClick={() => setPaymentMethod(m)} className={`py-2 text-[10px] uppercase font-bold border rounded-xl ${paymentMethod === m ? 'bg-[#191919] text-[#E9E0D5]' : 'bg-white text-[#6D6D6D]'}`}>{m.replace('_', ' ')}</button>
+                ))}
+            </div>
+
+            <input placeholder="Referencia de Pago" className="w-full p-3 bg-white border border-[#E9E0D5] rounded-xl outline-none" value={paymentRef} onChange={e=>setPaymentRef(e.target.value)}/>
+
+            <button onClick={() => saveToDatabase({paymentMethod, paymentRef})} disabled={isSubmitting} className={`w-full py-4 text-xs uppercase tracking-widest ${GLASS_DARK_STYLE} text-white mt-auto`}>
                 {isSubmitting ? 'Procesando...' : 'Confirmar Reserva'}
             </button>
           </div>
         )}
 
-        {step === 5 && (
-          <div className="relative flex flex-col items-center justify-center h-full text-center animate-in fade-in zoom-in overflow-hidden">
-            <div className="absolute inset-0 pointer-events-none">
-              {[...Array(40)].map((_, i) => (
-                <motion.div key={i} initial={{ y: -50, x: Math.random() * 400 - 200, opacity: 1, rotate: 0 }} animate={{ y: 500, rotate: 360, opacity: 0 }} transition={{ duration: 2 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2, ease: "linear" }} className="absolute top-0 left-1/2 w-2 h-2" style={{ backgroundColor: ['#96765A', '#E9E0D5', '#191919'][Math.floor(Math.random() * 3)], borderRadius: Math.random() > 0.5 ? '50%' : '0%' }} />
-              ))}
+         {step === 5 && (
+            <div className="h-full flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4"><Check size={32}/></div>
+                <h2 className="font-cinzel text-2xl text-[#191919] mb-2">¡Reserva Exitosa!</h2>
+                <button onClick={onClose} className="underline text-[#6D6D6D]">Cerrar</button>
             </div>
-            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-green-600 mb-6 shadow-lg border border-green-100 z-10"><Check size={32} /></div>
-            <h4 className={`${cinzel.className} text-xl md:text-2xl mb-2 z-10 text-[#191919]`}>¡Reserva Exitosa!</h4>
-            <p className="text-gray-500 mb-6 max-w-xs text-sm z-10">Tu cita ha sido guardada. Recibirás confirmación por correo.</p>
-            <button onClick={onClose} className="underline text-xs tracking-widest text-gray-400 hover:text-black z-10">Cerrar</button>
-          </div>
         )}
       </div>
     </div>
@@ -521,158 +561,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
   );
 };
 
-// --- COMPONENTE CARRUSEL 3D "NIKE STYLE" (OPTIMIZADO MÓVIL) ---
-const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[], addToCart: (p: any) => void, onViewAll: () => void }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
-
-  // Auto-play
-  useEffect(() => {
-    const timer = setInterval(() => {
-      nextSlide();
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [currentIndex]);
-
-  const nextSlide = () => {
-    setDirection(1);
-    setCurrentIndex((prev) => (prev === products.length - 1 ? 0 : prev + 1));
-  };
-
-  const prevSlide = () => {
-    setDirection(-1);
-    setCurrentIndex((prev) => (prev === 0 ? products.length - 1 : prev - 1));
-  };
-
-  const slideVariants: Variants = {
-    enter: (direction: number) => ({ x: direction > 0 ? 1000 : -1000, opacity: 0, scale: 0.8 }),
-    center: { zIndex: 1, x: 0, opacity: 1, scale: 1, transition: { duration: 0.8, ease: "easeOut" } },
-    exit: (direction: number) => ({ zIndex: 0, x: direction < 0 ? 1000 : -1000, opacity: 0, scale: 0.8, transition: { duration: 0.6 } })
-  };
-
-  const currentProduct = products[currentIndex];
-  // Asegúrate de pasar processGoogleImage o definirla fuera
-  const imgUrl = processGoogleImage(currentProduct.img);
-
-  // Lógica 3D Mouse
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const rotateX = useTransform(y, [-100, 100], [15, -15]); 
-  const rotateY = useTransform(x, [-100, 100], [-15, 15]); 
-  
-  function handleMouse(event: React.MouseEvent) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
-    const xPct = (mouseX / width - 0.5) * 200; 
-    const yPct = (mouseY / height - 0.5) * 200;
-    x.set(xPct);
-    y.set(yPct);
-  }
-
-  function handleMouseLeave() { x.set(0); y.set(0); }
-
-  return (
-    // CAMBIO: h-auto en móvil, min-h-screen en PC. Padding vertical ajustado.
-    <div className="w-full h-auto md:min-h-[700px] relative flex flex-col items-center justify-center overflow-hidden py-12 md:py-0 bg-[#E9E0D5]">
-      
-      {/* Botón Ver Todo */}
-      <div className="absolute top-4 right-4 md:top-8 md:right-8 z-40">
-          <button onClick={onViewAll} className={`flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-[10px] md:text-xs uppercase tracking-widest ${GLASS_STYLE} bg-white/40`}>
-              Ver Todo <ArrowRight size={14} />
-          </button>
-      </div>
-
-      {/* Fondo Dinámico */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center overflow-hidden">
-          <motion.h1 
-            key={currentProduct.id}
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 0.1 }}
-            exit={{ y: -100, opacity: 0 }}
-            transition={{ duration: 0.8 }}
-            className={`${cinzel.className} text-[18vw] md:text-[15vw] leading-none font-bold text-[#96765A] whitespace-nowrap uppercase`}
-          >
-            BRONZER
-          </motion.h1>
-        </div>
-        <div className="absolute top-0 right-0 w-full md:w-3/4 h-full bg-gradient-to-b md:bg-gradient-to-l from-white/40 to-transparent"></div>
-      </div>
-
-      <div className="container mx-auto px-6 relative z-10 w-full flex flex-col items-center">
-        
-        {/* AREA DEL SLIDER */}
-        <div className="w-full h-[500px] md:h-full flex items-center justify-center relative mb-8 md:mb-0">
-            <AnimatePresence initial={false} custom={direction} mode="wait">
-            <motion.div
-                key={currentIndex}
-                custom={direction}
-                variants={slideVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                className="w-full flex flex-col md:flex-row items-center justify-between gap-6 md:gap-12 absolute md:relative top-0 md:top-auto"
-            >
-                {/* INFO (Izquierda en PC, Abajo en Móvil) */}
-                <div className="w-full md:w-1/2 text-left space-y-4 md:pl-12 order-2 md:order-1 relative z-20 mt-4 md:mt-0">
-                    <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
-                        <span className="inline-block py-1 px-3 border border-[#96765A] rounded-full text-[9px] md:text-[10px] uppercase tracking-widest text-[#96765A] mb-2 md:mb-4">Destacado</span>
-                        <h2 className={`${cinzel.className} text-3xl md:text-6xl text-[#191919] leading-tight`}>{currentProduct.name}</h2>
-                        <p className="text-[#6D6D6D] text-xs md:text-base max-w-md mt-2 md:mt-4 leading-relaxed font-light line-clamp-3 md:line-clamp-none">{currentProduct.description || "Lujo y pureza para tu piel."}</p>
-                        <div className="flex items-center gap-4 md:gap-6 mt-6 md:mt-8">
-                            <p className={`${cinzel.className} text-2xl md:text-3xl text-[#96765A]`}>€{Number(currentProduct.price).toFixed(2)}</p>
-                            <button onClick={() => addToCart(currentProduct)} className={`px-6 py-3 md:px-8 md:py-4 bg-[#191919] text-[#E9E0D5] text-[10px] md:text-xs uppercase tracking-[0.2em] rounded-full hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-2`}>
-                            Agregar <ShoppingBag size={16}/>
-                            </button>
-                        </div>
-                    </motion.div>
-                </div>
-
-                {/* IMAGEN 3D (Derecha en PC, Arriba en Móvil) */}
-                <motion.div 
-                className="w-full md:w-1/2 h-[250px] md:h-[600px] flex items-center justify-center perspective-1000 cursor-pointer order-1 md:order-2"
-                onMouseMove={handleMouse}
-                onMouseLeave={handleMouseLeave}
-                whileHover={{ scale: 1.05 }}
-                >
-                    <motion.div style={{ rotateX, rotateY, x, y }} className="relative w-full max-w-[280px] md:max-w-md aspect-square">
-                        <div className="absolute inset-0 bg-[#96765A]/20 rounded-full blur-3xl scale-75 transform translate-y-10 -z-10"></div>
-                        {imgUrl && <img src={imgUrl} alt={currentProduct.name} className="w-full h-full object-contain drop-shadow-[0_15px_15px_rgba(0,0,0,0.3)] md:drop-shadow-[0_35px_35px_rgba(0,0,0,0.4)]" />}
-                    </motion.div>
-                </motion.div>
-
-            </motion.div>
-            </AnimatePresence>
-        </div>
-
-        {/* CONTROLES (ABAJO DE TODO EN MÓVIL) */}
-        {/* En móvil: relative mt-8 (debajo del contenido). En PC: absolute bottom-10 */}
-        <div className="relative md:absolute mt-8 md:mt-0 md:bottom-10 left-auto md:left-1/2 md:-translate-x-1/2 flex items-center gap-6 md:gap-8 z-30">
-            <button onClick={prevSlide} className="p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowLeft size={18}/></button>
-            <div className="flex gap-2">
-                {products.map((_, idx) => (
-                    <div 
-                    key={idx} 
-                    onClick={() => { setDirection(idx > currentIndex ? 1 : -1); setCurrentIndex(idx); }}
-                    className={`h-1 cursor-pointer transition-all duration-300 rounded-full ${idx === currentIndex ? 'w-8 bg-[#191919]' : 'w-2 bg-[#191919]/30'}`}
-                    />
-                ))}
-            </div>
-            <button onClick={nextSlide} className="p-3 rounded-full border border-[#191919]/20 hover:bg-[#191919] hover:text-[#E9E0D5] transition-colors"><ArrowRight size={18}/></button>
-        </div>
-
-      </div>
-    </div>
-  );
-};
-
 // --- COMPONENTE ZONA PRIVADA DE CLIENTES ---
 const ClientAccessModal = ({ onClose, onLoginSuccess }: any) => {
   const [view, setView] = useState('login'); 
-  const [formData, setFormData] = useState({ fecha: '', nombre: '', email: '', password: '' });
+  const [formData, setFormData] = useState({ email: '', password: '', nombre: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -708,7 +600,7 @@ const ClientAccessModal = ({ onClose, onLoginSuccess }: any) => {
 
         const payload = {
             tab: "Clientes Registrados", 
-            data: [formData.fecha, formData.nombre, formData.email, formData.password,] 
+            data: [formData.email, formData.password, formData.nombre] 
         };
 
         const res = await fetch('/api/database', { 
@@ -773,7 +665,7 @@ const ClientAccessModal = ({ onClose, onLoginSuccess }: any) => {
                 />
             </div>
 
-            {error && <p className="text-red-500 text-xs mt-4">{error}</p>}
+            {error && <p className="text-red-500 text-xs mt-4 font-bold">{error}</p>}
 
             <button 
                 onClick={handleAuth} 
@@ -795,7 +687,7 @@ const ClientAccessModal = ({ onClose, onLoginSuccess }: any) => {
   );
 };
 
-// --- COMPONENTE NOVEDADES (DASHBOARD CLIENTE) ---
+// --- COMPONENTE NOVEDADES ---
 const ClientNewsModal = ({ user, onClose }: any) => (
     <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed inset-0 z-[60] bg-[#FAF9F6] flex flex-col">
         <header className="p-6 border-b border-[#E9E0D5] flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-10">
@@ -807,7 +699,6 @@ const ClientNewsModal = ({ user, onClose }: any) => (
         </header>
         
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Tarjeta de Novedad 1 */}
             <div className="bg-[#191919] rounded-3xl p-6 text-[#E9E0D5] relative overflow-hidden">
                 <div className="relative z-10">
                     <span className="bg-[#96765A] text-white text-[10px] px-2 py-1 rounded font-bold uppercase">Nuevo</span>
@@ -818,7 +709,6 @@ const ClientNewsModal = ({ user, onClose }: any) => (
                 <div className="absolute right-[-20px] top-0 w-32 h-full bg-gradient-to-l from-[#96765A]/50 to-transparent"></div>
             </div>
 
-            {/* Ofertas Exclusivas */}
             <h3 className="text-[#191919] font-bold uppercase tracking-widest text-xs mt-8 mb-4">Tus Ofertas Exclusivas</h3>
             <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white border border-[#E9E0D5] p-4 rounded-2xl">
@@ -839,18 +729,14 @@ export default function BronzerFullPlatform() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false); 
-  const [clientAuthOpen, setClientAuthOpen] = useState(false);
-  const [clientNewsOpen, setClientNewsOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   
-  // --- ESTADOS: INICIALIZAMOS CON LOS DATOS DE DEMO ---
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [specialists, setSpecialists] = useState(INITIAL_SPECIALISTS);
-  const [services, setServices] = useState<Service[]>(INITIAL_SERVICES);
-  
-  // --- NUEVO: Estado para citas existentes ---
+  // --- ESTADOS: INICIALIZAMOS VACÍOS ---
+  const [products, setProducts] = useState<any[]>([]); 
+  const [specialists, setSpecialists] = useState<any[]>([]); 
+  const [services, setServices] = useState<any[]>([]); 
+  // --- NUEVO: Estado para guardar las citas ocupadas ---
   const [existingBookings, setExistingBookings] = useState<any[]>([]);
-
+  
   // --- NUEVO: ESTADO PARA MOSTRAR TIENDA COMPLETA ---
   const [showFullShop, setShowFullShop] = useState(false);
 
@@ -868,37 +754,20 @@ export default function BronzerFullPlatform() {
   const [clientData, setClientData] = useState<{ name: string; phone: string; note: string }>({ name: "", phone: "", note: "" }); 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const carouselRef = useRef<HTMLDivElement>(null);
+  // --- VARIABLES PARA EL CARRUSEL (BOUTIQUE) ---
   const [width, setWidth] = useState(0);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (carouselRef.current) {
       setWidth(carouselRef.current.scrollWidth - carouselRef.current.offsetWidth);
     }
-  }, []);
+  }, [products]);
 
-  // --- NUEVO: Función para cargar citas existentes ---
-  const fetchExistingBookings = async () => {
-    try {
-        const response = await fetch('/api/calendar');
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.data) {
-                setExistingBookings(data.data);
-            }
-        }
-    } catch (error) {
-        console.error("Error cargando citas existentes:", error);
-    }
-  };
-
+  // --- CARGA DE DATOS REALES ---
   useEffect(() => {
-    // CARGA DE DATOS REALES (SI EXISTEN)
     const fetchData = async () => {
         try {
-            // Cargar citas existentes
-            await fetchExistingBookings();
-
             const resProd = await fetch('/api/database?tab=Productos');
             const dataProd = await resProd.json();
             if(dataProd.success && dataProd.data.length > 0) setProducts(dataProd.data);
@@ -910,6 +779,27 @@ export default function BronzerFullPlatform() {
             const resServ = await fetch('/api/database?tab=Servicios');
             const dataServ = await resServ.json();
             if(dataServ.success && dataServ.data.length > 0) setServices(dataServ.data);
+
+            // --- CARGAR CITAS EXISTENTES PARA BLOQUEO ---
+            const resCitas = await fetch('/api/calendar'); 
+            const dataCitas = await resCitas.json();
+            if (dataCitas.success) {
+                const bookings = dataCitas.data.map((evt: any) => {
+                    const desc = evt.description || "";
+                    const getVal = (k: string) => {
+                        const regex = new RegExp(`${k}: (.*)`, 'i');
+                        const match = desc.match(regex);
+                        return match ? match[1].trim() : '';
+                    };
+                    const d = new Date(evt.start);
+                    return {
+                        date: d.toISOString().split('T')[0],
+                        time: d.toLocaleTimeString('es-VE', {hour:'2-digit', minute:'2-digit', hour12:false}), 
+                        specialist: getVal('Especialista')
+                    };
+                });
+                setExistingBookings(bookings);
+            }
         } catch (error) { console.error("Usando datos demo..."); }
     };
     fetchData();
@@ -919,8 +809,8 @@ export default function BronzerFullPlatform() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- FUNCIÓN CORREGIDA: GUARDAR CITAS EN PESTAÑA 'Citas' ---
-  const saveToDatabase = async (extraData: Record<string, unknown>): Promise<void> => {
+  // --- GUARDAR CITAS (PESTAÑA 'Citas') ---
+  const saveToDatabase = async (extraData?: Record<string, unknown>): Promise<void> => {
     setIsSubmitting(true);
     try {
       const payload = {
@@ -943,18 +833,12 @@ export default function BronzerFullPlatform() {
       
       if (!response.ok) throw new Error("Error server");
       const data = await response.json();
-      if (data.success) {
-        // Recargar las citas después de guardar
-        await fetchExistingBookings();
-        setBookingStep(5); 
-      } else {
-        alert("Error al agendar");
-      }
+      if (data.success) setBookingStep(5); else alert("Error al agendar");
     } catch (error) { alert("Fallo conexión"); } 
     finally { setIsSubmitting(false); }
   };
 
- // --- FUNCIÓN CORREGIDA: GUARDAR VENTAS EN PESTAÑA 'VENTAS' ---
+  // --- GUARDAR VENTAS (PESTAÑA 'VENTAS') ---
   const handleCheckout = async (orderData: any) => {
       try {
           const payload = {
@@ -987,6 +871,11 @@ export default function BronzerFullPlatform() {
       }
   };
 
+  // --- ESTADOS PARA CLIENTES ---
+  const [clientAuthOpen, setClientAuthOpen] = useState(false);
+  const [clientNewsOpen, setClientNewsOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
   // ------------------------------------------------------------------
   // MODO TIENDA COMPLETA (RESPONSIVE FIX)
   // ------------------------------------------------------------------
@@ -1007,32 +896,33 @@ export default function BronzerFullPlatform() {
             </header>
             
             <main className="container mx-auto px-4 pt-24 md:pt-32 pb-24">
-                {/* CAMBIO: grid-cols-2 en móvil (antes era 1) y gap-4 (más pegados) */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
                     {products.map((prod) => {
                         const imgUrl = processGoogleImage(prod.img);
                         return (
                             <div key={prod.id} className="group relative">
-                                {/* Altura reducida en móvil h-[200px] */}
                                 <div className="relative h-[200px] md:h-[350px] w-full bg-[#E9E0D5]/30 mb-3 overflow-hidden rounded-[1.5rem] border border-[#E9E0D5] shadow-sm transition-all duration-500 group-hover:shadow-xl">
                                     {imgUrl && <img src={imgUrl} alt={prod.name} className="w-full h-full object-cover opacity-95 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />}
                                     
-                                    {/* BOTÓN SOLO ESCRITORIO */}
+                                    {/* BOTÓN SOLO ESCRITORIO (HOVER) */}
                                     <button onClick={() => addToCart(prod)} className={`hidden md:block absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] py-3 text-xs uppercase tracking-widest ${GLASS_DARK_STYLE} rounded-full opacity-0 group-hover:opacity-100 transition-all`}>Añadir</button>
                                 </div>
                                 <h3 className="font-medium text-xs md:text-base text-[#191919] truncate">{prod.name}</h3>
                                 <p className="text-[#96765A] text-xs md:text-sm font-serif italic mb-2">€{Number(prod.price).toFixed(2)}</p>
                                 
-                                {/* BOTÓN SOLO MÓVIL (Más compacto) */}
-                                <button onClick={() => addToCart(prod)} className={`md:hidden w-full py-2 text-[10px] font-bold uppercase tracking-widest ${GLASS_DARK_STYLE} rounded-lg`}>+ Añadir</button>
+                                {/* BOTÓN SOLO MÓVIL (DEBAJO DEL PRODUCTO) */}
+                                <button onClick={() => addToCart(prod)} className={`md:hidden w-full py-2 text-[10px] uppercase tracking-widest ${GLASS_DARK_STYLE} rounded-xl`}>+ Añadir</button>
                             </div>
                         )
                     })}
                 </div>
             </main>
-           
-            {/* AQUÍ AGREGAMOS LA PROPIEDAD onCheckout */}
+            {/* AGREGAMOS existingBookings AL MODAL */}
             {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} />}
+            
+            {/* MODALES DE CLIENTE (NECESARIOS TAMBIÉN EN LA TIENDA) */}
+            {clientAuthOpen && (<ClientAccessModal onClose={() => setClientAuthOpen(false)} onLoginSuccess={(user: any) => { setCurrentUser(user); setClientAuthOpen(false); setClientNewsOpen(true); }} />)}
+            {clientNewsOpen && (<ClientNewsModal user={currentUser} onClose={() => setClientNewsOpen(false)} />)}
         </div>
       );
   }
@@ -1045,11 +935,9 @@ export default function BronzerFullPlatform() {
         {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       </AnimatePresence>
       
-      {/* HEADER CORREGIDO: ALTURA Y MÁRGENES MÓVILES */}
-      <header className={`fixed top-0 w-full z-50 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] border-b ${isScrolled ? 'bg-[#E9E0D5]/90 backdrop-blur-xl border-[#96765A]/10 h-16 md:h-20 shadow-sm' : 'bg-transparent border-transparent h-20 md:h-32'}`}>
-        <div className="container mx-auto h-full flex items-center justify-between relative">
+      <header className={`fixed top-0 w-full z-50 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] border-b ${isScrolled ? 'bg-white/90 backdrop-blur-xl border-[#E9E0D5] h-16 md:h-20 shadow-sm' : 'bg-transparent border-transparent h-20 md:h-32'}`}>
+        <div className="container mx-auto h-full flex items-center justify-between relative px-6 md:px-12">
           
-          {/* 1. LOGO: 'left-8' para móvil, 'left-12' para PC */}
           <div className={`absolute top-1/2 -translate-y-1/2 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] z-20 ${isScrolled ? 'left-1/2 -translate-x-1/2' : 'left-8 md:left-12'}`}>
              <div className={`${cinzel.className} text-xl md:text-2xl tracking-[0.15em] font-semibold flex items-center gap-2 text-[#191919]`}>
                BRONZER 
@@ -1057,37 +945,31 @@ export default function BronzerFullPlatform() {
              </div>
           </div>
 
-          {/* 2. MENÚ: SE OCULTA AL BAJAR */}
-          <nav className={`hidden md:flex mx-auto gap-8 text-xs tracking-[0.2em] uppercase font-medium text-gray-500 transition-all duration-500 delay-100 ${isScrolled ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
+          <nav className={`hidden md:flex mx-auto gap-8 text-xs tracking-[0.2em] uppercase font-medium text-[#6D6D6D] transition-all duration-500 delay-100 ${isScrolled ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
             {['Experiencia', 'Servicios', 'Boutique', 'Contacto'].map(item => (
-              <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-black transition-colors">{item}</a>
+              <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-[#191919] transition-colors">{item}</a>
             ))}
           </nav>
 
-          {/* 3. ICONOS Y BOTÓN: 'right-8' para móvil */}
           <div className="absolute right-8 md:right-12 top-1/2 -translate-y-1/2 flex items-center gap-4 md:gap-6 z-20">
-            {/* --- BOTÓN DE ACCESO CLIENTE --- */}
-            <button 
-                onClick={() => currentUser ? setClientNewsOpen(true) : setClientAuthOpen(true)}
-                className="relative cursor-pointer hover:text-[#96765A] transition-colors mr-4"
-            >
+            
+            {/* BOTÓN USUARIO */}
+            <button onClick={() => currentUser ? setClientNewsOpen(true) : setClientAuthOpen(true)} className="relative cursor-pointer hover:text-[#96765A] transition-colors mr-2">
                 {currentUser ? (
-                    <div className="w-6 h-6 bg-[#96765A] rounded-full flex items-center justify-center text-white text-xs font-bold">
-                        {currentUser.Nombre?.charAt(0)}
-                    </div>
+                    <div className="w-6 h-6 bg-[#96765A] rounded-full flex items-center justify-center text-white text-xs font-bold">{currentUser.Nombre?.charAt(0)}</div>
                 ) : (
                     <User size={20} strokeWidth={1.5} />
                 )}
             </button>
-            {/* ------------------------------- */}
+
             <div className="relative cursor-pointer hover:text-[#96765A] transition-colors" onClick={() => setCartOpen(true)}>
               <ShoppingBag size={20} strokeWidth={1.5} />
-              {cart.length > 0 && <span className="absolute -top-2 -right-2 bg-[#191919] text-[#E9E0D5] text-[10px] w-4 h-4 flex items-center justify-center rounded-full shadow-sm">{cart.length}</span>}
+              {cart.length > 0 && <span className="absolute -top-2 -right-2 bg-[#191919] text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full shadow-sm">{cart.length}</span>}
             </div>
 
             <button 
                 onClick={() => { setSelectedService(null); setBookingStep(1); setBookingOpen(true); }} 
-                className={`hidden md:block px-8 py-3 text-xs tracking-[0.2em] uppercase transition-all duration-300 ${GLASS_STYLE} ${isScrolled ? 'bg-[#191919] text-[#BLACK] border-transparent hover:bg-[#2B2B2B]' : ''}`}
+                className={`hidden md:block px-8 py-3 text-xs tracking-[0.2em] uppercase transition-all duration-300 ${GLASS_STYLE} ${isScrolled ? 'bg-[#191919] text-[#E9E0D5] border-transparent hover:bg-[#2B2B2B]' : ''}`}
             >
                 Agendar
             </button>
@@ -1096,11 +978,27 @@ export default function BronzerFullPlatform() {
         </div>
       </header>
 
-      {/* HERO SECTION CON VIDEO DE FONDO (FULL SCREEN) */}
-      <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
+      {/* HERO SECTION CORREGIDA: Padding Top Aumentado (pt-28) */}
+      <section className="relative min-h-screen pt-28 md:pt-32 flex flex-col md:flex-row">
+        <div className="w-full md:w-1/2 flex flex-col justify-center px-6 md:px-24 py-12 md:py-0 relative overflow-hidden order-2 md:order-1">
+           <div className="absolute inset-0 bg-gradient-to-br from-white via-[#FAF9F6] to-[#E9E0D5]/20 -z-10"></div>
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: showSplash ? 3.8 : 0.2 }} className="relative z-10">
+            <span className="text-[#96765A] text-xs tracking-[0.4em] uppercase font-bold mb-4 block">Medical Aesthetic</span>
+            <h1 className={`${cinzel.className} text-4xl md:text-5xl lg:text-7xl leading-[1.1] mb-6 text-[#191919] drop-shadow-sm`}>Centro <br/> Estético y <span className="italic text-[#6D6D6D] font-serif">Spa.</span></h1>
+            <p className="text-[#6D6D6D] font-light leading-relaxed max-w-md mb-8 md:mb-10 text-sm md:text-base">Elevamos el estándar de la belleza. Tecnología de vanguardia en un ambiente de calma absoluta.</p>
+            {/* AQUÍ TAMBIÉN: Limpiamos el servicio seleccionado para el botón del Hero */}
+            <button 
+                onClick={() => { setSelectedService(null); setBookingStep(1); setBookingOpen(true); }} 
+                className={`flex w-fit items-center gap-4 px-6 md:px-8 py-3 md:py-4 text-xs uppercase tracking-widest ${GLASS_STYLE}`}
+            >
+                Reservar Cita <ArrowRight size={14} />
+            </button>
+          </motion.div>
+        </div>
         
-        {/* 1. VIDEO DE FONDO (OCUPA TODO EL ESPACIO) */}
-        <div className="absolute inset-0 z-0">
+        {/* COLUMNA DERECHA: VIDEO DE FONDO */}
+        <div className="w-full md:w-1/2 h-[28vh] md:h-auto relative order-1 md:order-2">
+          {/* USAMOS VIDEO HTML5 STANDARD */}
           <video 
             className="w-full h-full object-cover" 
             autoPlay 
@@ -1110,56 +1008,26 @@ export default function BronzerFullPlatform() {
           >
             <source src="/portada.mp4" type="video/mp4" />
           </video>
-          {/* Capas de superposición para legibilidad del texto */}
-          <div className="absolute inset-0 bg-white/20"></div>
-          {/* Gradiente: Sólido a la izquierda (texto), transparente a la derecha (video) */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#FAF9F6] via-[#FAF9F6]/10 to-transparent"></div>
-        </div>
-
-        {/* 2. CONTENIDO (SOBRE EL VIDEO) */}
-        <div className="container mx-auto px-6 md:px-12 relative z-10 w-full h-full flex flex-col justify-center">
-          <div className="w-full md:w-1/2">
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ duration: 0.8, delay: showSplash ? 3.8 : 0.2}} 
-            >
-              <span className="text-[#96765A] text-xs tracking-[0.4em] uppercase font-bold mb-4 block">Medical Aesthetic</span>
-              <h1 className={`${cinzel.className} text-4xl md:text-5xl lg:text-7xl leading-[1.1] mb-6 text-[#191919] drop-shadow-sm`}>Centro <br/> Estético y <span  className="italic text-[#6D6D6D] font-serif"> <br/> Spa.</span></h1>
-              <p className="text-[#191919] font-medium leading-relaxed max-w-md mb-8 md:mb-10 text-sm md:text-base">Elevamos el estándar de la belleza. Tecnología de vanguardia en un ambiente de calma absoluta.</p>
-              
-              <button 
-                  onClick={() => { setSelectedService(null); setBookingStep(1); setBookingOpen(true); }} 
-                  className={`flex w-fit items-center gap-4 px-6 md:px-8 py-3 md:py-4 text-xs uppercase tracking-widest ${GLASS_STYLE} bg-white/80 hover:bg-[#96765A] hover:text-white transition-all`}
-              >
-                  Reservar Cita <ArrowRight size={14} />
-              </button>
-            </motion.div>
-          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#FAF9F6]/20 to-transparent mix-blend-overlay"></div>
         </div>
       </section>
 
-      <section id="experiencia" className="py-16 md:py-24 px-6 md:px-24 bg-white/50 relative">
+      <section id="experiencia" className="py-16 md:py-24 px-6 md:px-24 bg-white relative">
         <div className="max-w-4xl mx-auto text-center mb-12 md:mb-16 relative z-10">
-          {/* BLOQUE DE 5 ESTRELLAS */}
-          <div className="flex justify-center gap-1 mb-6">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-6 h-6 text-[#96765A] drop-shadow-sm" fill="#96765A" />
-            ))}
-          </div>
-          
+          <Star className="w-6 h-6 text-[#96765A] mx-auto mb-6 drop-shadow-sm" fill="#96765A" />
           <h2 className={`${cinzel.className} text-2xl md:text-3xl lg:text-4xl mb-6 text-[#191919]`}>The Bronzer Standard</h2>
-          <p className="text-gray-600 font-light leading-7 md:leading-8 text-sm md:text-base">"No creemos en la transformación forzada, sino en la revelación de tu mejor versión. Utilizamos protocolos suizos y aparatología alemana para garantizar resultados visibles."</p>
+          <p className="text-[#6D6D6D] font-light leading-7 md:leading-8 text-sm md:text-base">"No creemos en la transformación forzada, sino en la revelación de tu mejor versión. Utilizamos protocolos suizos y aparatología alemana para garantizar resultados visibles."</p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center border-t border-b border-[#96765A]/10 py-12 relative z-10">
-          {[{ n: "5", l: "Años de Experiencia" }, { n: "2k+", l: "Pacientes Felices" }, { n: "100%", l: "Tecnología Certificada" }, { n: "Certificados", l: "Especialistas" }].map((stat, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center border-t border-b border-[#E9E0D5] py-12 relative z-10">
+          {[{ n: "5+", l: "Años de Experiencia" }, { n: "2k+", l: "Pacientes Felices" }, { n: "100%", l: "Tecnología Certificada" }, { n: "Top", l: "Especialistas" }].map((stat, i) => (
             <div key={i}><h3 className={`${cinzel.className} text-2xl md:text-3xl lg:text-4xl mb-2 text-[#191919]`}>{stat.n}</h3><p className="text-[9px] md:text-[10px] uppercase tracking-widest text-[#96765A]">{stat.l}</p></div>
           ))}
         </div>
          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] z-0 pointer-events-none"></div>
       </section>
 
-   <section id="servicios" className="py-16 md:py-24 bg-[#E9E0D5]/30 relative overflow-hidden">
+      {/* --- SECCIÓN SERVICIOS (GRILLA DE 2 COLUMNAS MÍNIMO) --- */}
+      <section id="servicios" className="py-16 md:py-24 bg-[#E9E0D5]/30 relative overflow-hidden">
         <div className="container mx-auto px-4 md:px-12 relative z-10">
           
           <div className="flex flex-col md:flex-row justify-between items-end mb-8 md:mb-12 gap-4 relative z-10">
@@ -1173,41 +1041,18 @@ export default function BronzerFullPlatform() {
             </button>
           </div>
 
-          {/* AQUÍ ESTÁ EL CAMBIO: grid-cols-2 en móvil, gap-3 para que quepan bien */}
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8">
             {services.map((item) => {
               const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item.Image);
               return (
-              <motion.div 
-                key={item.id} 
-                initial={{ opacity: 0, y: 20 }} 
-                whileInView={{ opacity: 1, y: 0 }} 
-                viewport={{ once: true }} 
-                transition={{ duration: 0.5 }} 
-                className="bg-white/80 backdrop-blur-md p-3 md:p-4 rounded-2xl md:rounded-3xl group cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(150,118,90,0.1)] transition-all duration-500 border border-[#E9E0D5]"
-              >
-                {/* Altura reducida en móvil (h-32) para que no se vea gigante */}
-                <div className="relative h-32 md:h-64 mb-3 md:mb-6 overflow-hidden bg-[#E9E0D5]/30 rounded-xl md:rounded-2xl">
+              <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="bg-white/80 backdrop-blur-md p-3 md:p-4 rounded-3xl group cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(150,118,90,0.1)] transition-all duration-500 border border-[#E9E0D5]">
+                <div className="relative h-32 md:h-64 mb-3 md:mb-6 overflow-hidden bg-[#E9E0D5]/30 rounded-2xl">
                    {imgUrl && <img src={imgUrl} alt={item.name || item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />}
-                  <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-white/90 backdrop-blur-md px-2 py-1 text-[10px] md:text-xs font-bold font-serif italic rounded-full shadow-sm border border-[#E9E0D5] text-[#96765A]">
-                    €{item.price}
-                  </div>
+                  <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-white/90 backdrop-blur-md px-2 py-1 text-[10px] md:text-xs font-bold font-serif italic rounded-full shadow-sm border border-[#E9E0D5] text-[#96765A]">€{item.price}</div>
                 </div>
-
-                <h3 className={`${cinzel.className} text-xs md:text-lg mb-1 md:mb-2 pl-1 text-[#191919] truncate`}>
-                    {item.name || item.title}
-                </h3>
-                
-                <div className="flex items-center gap-2 text-[10px] md:text-xs text-[#6D6D6D] mb-3 md:mb-6 pl-1">
-                    <Clock size={10} className="md:w-3 md:h-3" /> {item.duration || item.time}
-                </div>
-                
-                <button 
-                    onClick={() => { setSelectedService(item); setBookingStep(1); setBookingOpen(true); }} 
-                    className={`w-full py-2 md:py-3 text-[10px] md:text-xs uppercase tracking-widest ${GLASS_STYLE}`}
-                >
-                    Reservar
-                </button>
+                <h3 className={`${cinzel.className} text-xs md:text-lg mb-1 md:mb-2 pl-2 text-[#191919]`}>{item.name || item.title}</h3>
+                <div className="flex items-center gap-2 text-[10px] md:text-xs text-[#6D6D6D] mb-2 md:mb-6 pl-2"><Clock size={12} /> {item.duration || item.time}</div>
+                <button onClick={() => { setSelectedService(item); setBookingStep(1); setBookingOpen(true); }} className={`w-full py-2 md:py-3 text-[10px] md:text-xs uppercase tracking-widest ${GLASS_STYLE}`}>Reservar</button>
               </motion.div>
             )})}
           </div>
@@ -1218,42 +1063,134 @@ export default function BronzerFullPlatform() {
         </div>
       </section>
 
-      {/* --- SECCIÓN BOUTIQUE 3D CAROUSEL (ESTILO NIKE) --- */}
-      <section id="boutique" className="relative bg-[#FAF9F6] overflow-hidden min-h-[700px] flex items-center">
-        
-        <Boutique3DCarousel 
-            products={products.slice(0, 3)} // <--- ESTO LIMITA A SOLO 3 PRODUCTOS
-            addToCart={addToCart} 
-            onViewAll={() => { setShowFullShop(true); window.scrollTo(0,0); }} // <--- ESTO ABRE LA TIENDA
-        />
+      {/* --- SECCIÓN BOUTIQUE (CARRUSEL 3D AJUSTADO MÓVIL) --- */}
+      <section id="boutique" className="py-20 md:py-28 px-0 md:px-12 bg-[#FAF9F6] relative overflow-hidden">
+        <div className="container mx-auto relative z-10 px-6">
+            
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-4">
+                <div>
+                    <h2 className={`${cinzel.className} text-3xl md:text-5xl drop-shadow-sm text-[#191919]`}>Bronzer Boutique</h2>
+                    <p className="text-[#6D6D6D] text-xs uppercase tracking-widest mt-2">Skin Care de Alta Gama</p>
+                </div>
+                
+                <div className="md:hidden flex items-center gap-2 text-[10px] text-[#96765A] animate-pulse">
+                    <ArrowRight size={12}/> DESLIZA
+                </div>
 
+                <button 
+                    onClick={() => { setShowFullShop(true); window.scrollTo(0,0); }}
+                    className={`hidden md:flex items-center gap-2 px-6 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}
+                >
+                    Ver Todo <ArrowRight size={14} />
+                </button>
+            </div>
+            
+            <motion.div 
+                ref={carouselRef} 
+                className="cursor-grab active:cursor-grabbing overflow-visible p-4" 
+                whileTap={{ cursor: "grabbing" }}
+            >
+                <motion.div 
+                    drag="x" 
+                    dragConstraints={{ right: 0, left: -width }} 
+                    className="flex gap-4 md:gap-12 pl-2"
+                >
+                    {products.slice(0, 5).map((prod) => {
+                        const imgUrl = processGoogleImage(prod.img);
+                        return (
+                            <motion.div 
+                                key={prod.id} 
+                                className="relative min-w-[42vw] md:min-w-[400px] group perspective-1000"
+                            >
+                                <div className="bg-white rounded-[2rem] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.1)] border border-white/60 p-2 md:p-6 transition-all duration-500 ease-out group-hover:-translate-y-4 group-hover:shadow-[0_30px_60px_-15px_rgba(150,118,90,0.3)]">
+                                    
+                                    <div className="relative h-[180px] md:h-[450px] w-full bg-[#E9E0D5]/30 mb-4 md:mb-6 overflow-hidden rounded-[1.5rem] shadow-inner">
+                                        {imgUrl && (
+                                            <img 
+                                                src={imgUrl} 
+                                                alt={prod.name} 
+                                                loading="lazy" 
+                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 pointer-events-none" 
+                                            />
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60"></div>
+                                        
+                                        <div className="absolute bottom-2 left-2 md:bottom-4 md:left-4 bg-white/90 backdrop-blur-md px-3 py-1 md:px-4 md:py-2 rounded-full shadow-lg z-10 border border-[#E9E0D5]">
+                                            <p className="text-[#96765A] font-serif font-bold text-[10px] md:text-base">€{Number(prod.price).toFixed(2)}</p>
+                                        </div>
+
+                                        <button onClick={() => addToCart(prod)} className={`
+                                            hidden md:block absolute bottom-4 right-4 px-6 py-3 
+                                            text-xs uppercase tracking-widest text-white 
+                                            ${GLASS_DARK_STYLE} rounded-full 
+                                            opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 
+                                            transition-all duration-500 shadow-xl
+                                        `}>
+                                            Añadir +
+                                        </button>
+                                    </div>
+
+                                    <div className="text-center px-1 md:px-2 relative z-20">
+                                        <h3 className={`${cinzel.className} text-xs md:text-2xl text-[#191919] mb-1 truncate`}>{prod.name}</h3>
+                                        <p className="text-[#6D6D6D] text-[10px] md:text-xs line-clamp-2 min-h-[2.5em] leading-relaxed hidden md:block">
+                                            {prod.description || "Tratamiento exclusivo para el cuidado de la piel."}
+                                        </p>
+                                    </div>
+
+                                    <button 
+                                        onClick={() => addToCart(prod)} 
+                                        className={`
+                                            md:hidden w-full mt-2 py-2 
+                                            text-[10px] uppercase tracking-[0.2em] font-bold text-[#E9E0D5] 
+                                            bg-[#191919] rounded-xl shadow-lg 
+                                            active:scale-95 transition-transform
+                                        `}
+                                    >
+                                        Añadir
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )
+                    })}
+                </motion.div>
+            </motion.div>
+
+            <div className="flex md:hidden justify-center mt-6">
+                <button 
+                    onClick={() => { setShowFullShop(true); window.scrollTo(0,0); }}
+                    className={`flex items-center gap-2 px-8 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}
+                >
+                    Ver Todo <ArrowRight size={14} />
+                </button>
+            </div>
+
+        </div>
+         <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#E9E0D5]/40 via-transparent to-transparent -z-10"></div>
       </section>
 
       <section className="relative h-[50vh] md:h-[80vh] w-full">
         <Image src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=2070&auto=format&fit=crop" alt="Spa Interior" fill className="object-cover" />
-        <div className="absolute inset-0 bg-[#191919]/10 flex items-center justify-center text-center">
-          <div className="bg-[#E9E0D5]/70 backdrop-blur-lg p-8 md:p-12 max-w-sm md:max-w-xl rounded-3xl border border-white/40 shadow-2xl mx-4">
+        <div className="absolute inset-0 bg-[#191919]/20 flex items-center justify-center text-center">
+          <div className="bg-white/70 backdrop-blur-lg p-8 md:p-12 max-w-sm md:max-w-xl rounded-3xl border border-white/40 shadow-2xl mx-4">
             <h3 className={`${cinzel.className} text-2xl md:text-3xl mb-4 text-[#191919]`}>Visítanos</h3>
-            <p className="text-gray-700 mb-8 font-light leading-relaxed text-sm md:text-base">Un oasis urbano diseñado para desconectar.</p>
+            <p className="text-[#6D6D6D] mb-8 font-light leading-relaxed text-sm md:text-base">Un oasis urbano diseñado para desconectar. <br/>Valet Parking disponible.</p>
              <button className={`px-8 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}>Ver Ubicación</button>
           </div>
         </div>
       </section>
 
-      <footer id="contacto" className="bg-[#191919] text-white pt-16 md:pt-24 pb-12 relative overflow-hidden">
+      <footer id="contacto" className="bg-[#191919] text-[#E9E0D5] pt-16 md:pt-24 pb-12 relative overflow-hidden">
         <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-16 mb-16 relative z-10">
-             <div><h2 className={`${cinzel.className} text-2xl md:text-3xl mb-6 flex items-center gap-2`}>BRONZER <div className="w-1.5 h-1.5 bg-[#96765A] rounded-full mt-2"></div></h2><p className="text-gray-400 text-sm font-light leading-7 max-w-xs">Centro estético de alto rendimiento. Fusionamos protocolos médicos con experiencias sensoriales de lujo.</p></div>
-             <div><h4 className="text-xs uppercase tracking-[0.2em] text-[#96765A] mb-6 font-semibold">Contacto</h4><ul className="space-y-4 text-sm text-gray-400 font-light"><li className="flex items-center gap-3"><Phone size={16} className="text-[#96765A]"/> +58 412 000 0000</li><li className="flex items-center gap-3"><Mail size={16} className="text-[#96765A]"/> citas@bronzer.com</li></ul></div>
-             <div><h4 className="text-xs uppercase tracking-[0.2em] text-[#96765A] mb-6 font-semibold">Horarios</h4><ul className="space-y-2 text-sm text-gray-400 font-light"><li className="flex justify-between border-b border-white/10 pb-2"><span>Lunes - Viernes</span> <span>9:00 - 19:00</span></li><li className="flex justify-between border-b border-white/10 pb-2"><span>Sábados</span> <span>10:00 - 16:00</span></li><li className="flex justify-between pb-2"><span className="text-gray-500">Domingos</span> <span className="text-gray-500">Cerrado</span></li></ul></div>
+             <div><h2 className={`${cinzel.className} text-2xl md:text-3xl mb-6 flex items-center gap-2`}>BRONZER <div className="w-1.5 h-1.5 bg-[#96765A] rounded-full mt-2"></div></h2><p className="text-[#6D6D6D] text-sm font-light leading-7 max-w-xs">Centro estético de alto rendimiento. Fusionamos protocolos médicos con experiencias sensoriales de lujo.</p></div>
+             <div><h4 className="text-xs uppercase tracking-[0.2em] text-[#96765A] mb-6 font-semibold">Contacto</h4><ul className="space-y-4 text-sm text-[#6D6D6D] font-light"><li className="flex items-center gap-3"><Phone size={16} className="text-[#96765A]"/> +58 412 000 0000</li><li className="flex items-center gap-3"><Mail size={16} className="text-[#96765A]"/> citas@bronzer.com</li></ul></div>
+             <div><h4 className="text-xs uppercase tracking-[0.2em] text-[#96765A] mb-6 font-semibold">Horarios</h4><ul className="space-y-2 text-sm text-[#6D6D6D] font-light"><li className="flex justify-between border-b border-white/10 pb-2"><span>Lunes - Viernes</span> <span>9:00 - 19:00</span></li><li className="flex justify-between border-b border-white/10 pb-2"><span>Sábados</span> <span>10:00 - 16:00</span></li><li className="flex justify-between pb-2"><span className="text-[#6D6D6D]">Domingos</span> <span className="text-[#6D6D6D]">Cerrado</span></li></ul></div>
         </div>
-        <div className="container mx-auto px-6 border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest text-gray-500 relative z-10">
+        <div className="container mx-auto px-6 border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest text-[#6D6D6D] relative z-10">
             <p>© 2025 BRONZER AESTHETIC. ALL RIGHTS RESERVED.</p>
             <div className="flex gap-6 mt-4 md:mt-0">
-
                 <a href="https://www.instagram.com/bronzerdeluxe/" target="_blank" rel="noopener noreferrer">
                     <Instagram className="cursor-pointer hover:text-[#96765A] transition-colors" size={18} />
                 </a>
-
                 <Mail className="cursor-pointer hover:text-[#96765A] transition-colors" size={18} />
             </div>
         </div>
@@ -1261,19 +1198,17 @@ export default function BronzerFullPlatform() {
       </footer>
 
       <AnimatePresence>
-        {bookingOpen && <BookingModal key="modal" onClose={() => setBookingOpen(false)} step={bookingStep} setStep={setBookingStep} selectedSpecialist={selectedSpecialist} setSelectedSpecialist={setSelectedSpecialist} selectedService={selectedService} setSelectedService={setSelectedService} selectedDate={selectedDate} setSelectedDate={setSelectedDate} selectedTime={selectedTime} setSelectedTime={setSelectedTime} clientData={clientData} setClientData={setClientData} isSubmitting={isSubmitting} saveToDatabase={saveToDatabase} specialistsList={specialists} existingBookings={existingBookings} />}
-        {cartOpen && <CartDrawer key="drawer" onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} />}
-      </AnimatePresence>
-
-      {/* MODALES DE CLIENTE */}
-      <AnimatePresence>
+        {bookingOpen && <BookingModal key="modal" isOpen={bookingOpen} onClose={() => setBookingOpen(false)} step={bookingStep} setStep={setBookingStep} selectedSpecialist={selectedSpecialist} setSelectedSpecialist={setSelectedSpecialist} selectedService={selectedService} setSelectedService={setSelectedService} selectedDate={selectedDate} setSelectedDate={setSelectedDate} selectedTime={selectedTime} setSelectedTime={setSelectedTime} clientData={clientData} setClientData={setClientData} isSubmitting={isSubmitting} saveToDatabase={saveToDatabase} specialistsList={specialists} existingBookings={existingBookings} />}
+        {cartOpen && <CartDrawer key="drawer" isOpen={cartOpen} onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} />}
+        
+        {/* MODALES DE CLIENTE */}
         {clientAuthOpen && (
             <ClientAccessModal 
                 onClose={() => setClientAuthOpen(false)} 
                 onLoginSuccess={(user: any) => {
                     setCurrentUser(user);
                     setClientAuthOpen(false);
-                    setClientNewsOpen(true); // Abrir novedades al entrar
+                    setClientNewsOpen(true); 
                 }} 
             />
         )}
