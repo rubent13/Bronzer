@@ -1,4 +1,3 @@
-// app/api/calendar/route.ts
 import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
 
@@ -46,7 +45,7 @@ export async function GET() {
     });
 
     // Obtener citas de Google Sheets también
-    let sheetsAppointments = [];
+    let sheetsAppointments: any[] = [];
     if (spreadsheetId) {
       try {
         const sheetsResponse = await sheets.spreadsheets.values.get({
@@ -94,11 +93,14 @@ export async function GET() {
       // Obtener fecha y hora
       const startDate = event.start.dateTime || event.start.date;
       const dateObj = new Date(startDate);
+      
+      // Ajuste de visualización (solo lectura)
       const date = dateObj.toISOString().split('T')[0];
       const time = dateObj.toLocaleTimeString('es-ES', { 
         hour: '2-digit', 
         minute: '2-digit',
-        hour12: false 
+        hour12: false,
+        timeZone: 'America/Caracas' 
       }).replace('.', ':');
       
       return {
@@ -162,9 +164,15 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Crear evento en Google Calendar
-    const startDateTime = new Date(`${date}T${time}:00`);
-    const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // +1 hora
+    // --- CORRECCIÓN DE HORA ---
+    // Forzamos la zona horaria de Venezuela (-04:00) manualmente para evitar cambios por el servidor
+    const startDateTimeISO = `${date}T${time}:00-04:00`;
+    
+    // Calculamos fin de cita (+1 hora) manteniendo el formato string
+    const [hourStr, minuteStr] = time.split(':');
+    const endHour = parseInt(hourStr) + 1;
+    const endHourFormatted = endHour.toString().padStart(2, '0');
+    const endDateTimeISO = `${date}T${endHourFormatted}:${minuteStr}:00-04:00`;
 
     const eventDescription = `
 Cliente: ${name}
@@ -174,18 +182,18 @@ Especialista: ${specialist}
 Nota: ${note || 'Ninguna'}
 Método de Pago: ${paymentMethod || 'No especificado'}
 Referencia: ${paymentRef || 'N/A'}
-Fecha Reserva: ${new Date().toLocaleString('es-VE')}
+Fecha Reserva: ${new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' })}
     `.trim();
 
     const calendarEvent = {
       summary: `CITA: ${name} - ${service}`,
       description: eventDescription,
       start: { 
-        dateTime: startDateTime.toISOString(), 
-        timeZone: 'America/Caracas' 
+        dateTime: startDateTimeISO, 
+        timeZone: 'America/Caracas' // Refuerzo para Google
       },
       end: { 
-        dateTime: endDateTime.toISOString(), 
+        dateTime: endDateTimeISO, 
         timeZone: 'America/Caracas' 
       },
       colorId: '5', // Color amarillo
@@ -208,21 +216,21 @@ Fecha Reserva: ${new Date().toLocaleString('es-VE')}
     let sheetsResponse = null;
     if (spreadsheetId) {
       try {
-        const timestamp = new Date().toLocaleString('es-VE');
+        const timestamp = new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' });
         
         const newRow = [
-          timestamp,           // Fecha Reserva
-          name,               // Nombre Cliente
-          phone,              // Teléfono
-          service,            // Servicio
-          specialist,         // Especialista
-          date,               // Fecha Cita
-          time,               // Hora Cita
-          note || '',         // Nota
+          timestamp,            // Fecha Reserva
+          name,                 // Nombre Cliente
+          phone,                // Teléfono
+          service,              // Servicio
+          specialist,           // Especialista
+          date,                 // Fecha Cita
+          time,                 // Hora Cita
+          note || '',           // Nota
           paymentMethod || '', // Método Pago
-          paymentRef || '',   // Referencia Pago
+          paymentRef || '',    // Referencia Pago
           calendarResponse.data.id, // ID Evento Calendar
-          'Confirmada'        // Estado
+          'Confirmada'         // Estado
         ];
 
         sheetsResponse = await sheets.spreadsheets.values.append({
@@ -286,19 +294,22 @@ export async function PUT(request: Request) {
       eventId: eventId,
     });
 
-    // Recalcular hora inicio y fin
-    const startDateTime = new Date(`${date}T${time}:00`);
-    const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
+    // --- CORRECCIÓN HORA (Actualización) ---
+    const startDateTimeISO = `${date}T${time}:00-04:00`;
+    const [h, m] = time.split(':');
+    const endH = parseInt(h) + 1;
+    const endHStr = endH.toString().padStart(2, '0');
+    const endDateTimeISO = `${date}T${endHStr}:${m}:00-04:00`;
 
     // Actualizar evento
     const updatedEvent = {
       ...existingEvent.data,
       start: { 
-        dateTime: startDateTime.toISOString(), 
+        dateTime: startDateTimeISO, 
         timeZone: 'America/Caracas' 
       },
       end: { 
-        dateTime: endDateTime.toISOString(), 
+        dateTime: endDateTimeISO, 
         timeZone: 'America/Caracas' 
       },
     };
