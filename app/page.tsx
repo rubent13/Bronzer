@@ -260,7 +260,6 @@ interface BookingModalProps {
   isSubmitting: boolean;
   saveToDatabase: (extraData: Record<string, unknown>) => void;
   specialistsList: Array<any>;
-  existingBookings: any[]; // <--- ¡AGREGA ESTA LÍNEA!
 }
 
 const BookingModal: React.FC<BookingModalProps> = ({
@@ -270,31 +269,24 @@ const BookingModal: React.FC<BookingModalProps> = ({
   selectedDate, setSelectedDate,
   selectedTime, setSelectedTime,
   clientData, setClientData,
- isSubmitting, saveToDatabase, specialistsList,
-  existingBookings // RECIBIDO COMO PROP
-}: any) => {
+  isSubmitting, saveToDatabase, specialistsList
+}) => {
 
   const [paymentMethod, setPaymentMethod] = useState('pago_movil'); 
   const [paymentRef, setPaymentRef] = useState('');
 
-   const filteredSpecialists = selectedService
-    ? specialistsList.filter((spec: any) => {
-        if (!selectedService.specialists || String(selectedService.specialists).trim() === "") return true;
+  const filteredSpecialists = selectedService
+    ? specialistsList.filter((spec) => {
+        if (!selectedService.specialists || String(selectedService.specialists).trim() === "") {
+             return true;
+        }
+        
         const serviceSpecs = String(selectedService.specialists).toLowerCase();
         const specName = String(spec.name).toLowerCase();
+
         return serviceSpecs.includes(specName);
       })
     : specialistsList; 
-  
-  // LOGICA DE BLOQUEO DE HORARIO
-  const isTimeSlotTaken = (time: string) => {
-    if (!selectedSpecialist) return false;
-    return existingBookings.some((booking: any) => 
-       booking.date === selectedDate && 
-       booking.time.includes(time) && 
-       booking.specialist?.toLowerCase().trim() === selectedSpecialist.name.toLowerCase().trim()
-    );
-  };
 
   return (
   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-[#191919]/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -329,7 +321,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             <div className="grid grid-cols-2 gap-3 md:gap-4">
               
               {filteredSpecialists.length > 0 ? (
-                  filteredSpecialists.map((spec: any) => {
+                  filteredSpecialists.map((spec) => {
                     const imgUrl = processGoogleImage(spec.img);
                     return (
                     <div key={spec.id} onClick={() => { setSelectedSpecialist(spec); setStep(2); }} className="flex items-center gap-4 p-3 border border-white/50 rounded-2xl hover:border-[#96765A]/50 hover:bg-white/60 hover:shadow-md cursor-pointer transition-all group bg-white/30">
@@ -370,26 +362,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                   <p className="text-xs uppercase tracking-widest mb-3 text-[#191919]">Horas Disponibles</p>
                   <div className="grid grid-cols-3 gap-3">
-                    {['09:00', '11:00', '14:30', '16:00', '17:30'].map(time => {
-                      // Verificamos si está ocupado
-                      const taken = isTimeSlotTaken(time);
-                      
-                      return (
-                        <button 
-                            key={time} 
-                            disabled={taken} // DESACTIVAR SI ESTÁ OCUPADO
-                            onClick={() => { setSelectedTime(time); setStep(3); }} 
-                            className={`py-2 text-sm rounded-full border transition-all 
-                                ${taken 
-                                    ? 'bg-gray-100 text-gray-300 border-gray-100 cursor-not-allowed line-through' // Estilo visual de ocupado
-                                    : 'border-[#E9E0D5] hover:bg-[#E9E0D5]/50 text-[#6D6D6D] cursor-pointer' // Estilo libre
-                                }
-                            `}
-                        >
-                            {time}
-                        </button>
-                      );
-                    })}
+                    {['09:00', '11:00', '14:30', '16:00', '17:30'].map(time => (
+                      <button key={time} onClick={() => { setSelectedTime(time); setStep(3); }} className={`py-2 text-sm ${GLASS_STYLE.replace('py-3', '').replace('px-8','').replace('tracking-widest','')} hover:bg-white/20`}>{time}</button>
+                    ))}
                   </div>
                 </motion.div>
               )}
@@ -843,13 +818,11 @@ export default function BronzerFullPlatform() {
   const [clientAuthOpen, setClientAuthOpen] = useState(false);
   const [clientNewsOpen, setClientNewsOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  // --- AGREGAR ESTO: Estado para guardar las citas ocupadas ---
-  const [existingBookings, setExistingBookings] = useState<any[]>([]);
   
- // --- ESTADOS: INICIALIZAMOS VACÍOS [] PARA NO MOSTRAR DATOS FALSOS ---
-  const [products, setProducts] = useState<any[]>([]); 
-  const [specialists, setSpecialists] = useState<any[]>([]); 
-  const [services, setServices] = useState<any[]>([]);
+  // --- ESTADOS: INICIALIZAMOS CON LOS DATOS DE DEMO ---
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [specialists, setSpecialists] = useState(INITIAL_SPECIALISTS);
+  const [services, setServices] = useState<Service[]>(INITIAL_SERVICES);
   
   // --- NUEVO: ESTADO PARA MOSTRAR TIENDA COMPLETA ---
   const [showFullShop, setShowFullShop] = useState(false);
@@ -892,28 +865,6 @@ export default function BronzerFullPlatform() {
             const resServ = await fetch('/api/database?tab=Servicios');
             const dataServ = await resServ.json();
             if(dataServ.success && dataServ.data.length > 0) setServices(dataServ.data);
-
-            // --- CARGAR CITAS EXISTENTES PARA BLOQUEO ---
-            const resCitas = await fetch('/api/calendar'); 
-            const dataCitas = await resCitas.json();
-            if (dataCitas.success) {
-                const bookings = dataCitas.data.map((evt: any) => {
-                    const desc = evt.description || "";
-                    const getVal = (k: string) => {
-                        const regex = new RegExp(`${k}: (.*)`, 'i');
-                        const match = desc.match(regex);
-                        return match ? match[1].trim() : '';
-                    };
-                    const d = new Date(evt.start);
-                    return {
-                        date: d.toISOString().split('T')[0],
-                        time: d.toLocaleTimeString('es-VE', {hour:'2-digit', minute:'2-digit', hour12:false}), 
-                        specialist: getVal('Especialista')
-                    };
-                });
-                setExistingBookings(bookings);
-            }
-            // ----------------------------------------------
         } catch (error) { console.error("Usando datos demo..."); }
     };
     fetchData();
@@ -1259,7 +1210,7 @@ export default function BronzerFullPlatform() {
       </footer>
 
       <AnimatePresence>
-        {bookingOpen && <BookingModal key="modal" onClose={() => setBookingOpen(false)} step={bookingStep} setStep={setBookingStep} selectedSpecialist={selectedSpecialist} setSelectedSpecialist={setSelectedSpecialist} selectedService={selectedService} setSelectedService={setSelectedService} selectedDate={selectedDate} setSelectedDate={setSelectedDate} selectedTime={selectedTime} setSelectedTime={setSelectedTime} clientData={clientData} setClientData={setClientData} isSubmitting={isSubmitting} saveToDatabase={saveToDatabase} specialistsList={specialists} existingBookings={existingBookings} />}
+        {bookingOpen && <BookingModal key="modal" onClose={() => setBookingOpen(false)} step={bookingStep} setStep={setBookingStep} selectedSpecialist={selectedSpecialist} setSelectedSpecialist={setSelectedSpecialist} selectedService={selectedService} setSelectedService={setSelectedService} selectedDate={selectedDate} setSelectedDate={setSelectedDate} selectedTime={selectedTime} setSelectedTime={setSelectedTime} clientData={clientData} setClientData={setClientData} isSubmitting={isSubmitting} saveToDatabase={saveToDatabase} specialistsList={specialists} />}
         {cartOpen && <CartDrawer key="drawer" onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} />}
       </AnimatePresence>
 
