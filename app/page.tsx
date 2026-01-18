@@ -842,13 +842,13 @@ export default function BronzerFullPlatform() {
   const [clientAuthOpen, setClientAuthOpen] = useState(false);
   const [clientNewsOpen, setClientNewsOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [services, setServices] = useState<any[]>([]);
   // --- AGREGAR ESTO: Estado para guardar las citas ocupadas ---
   const [existingBookings, setExistingBookings] = useState<any[]>([]);
   
  // --- ESTADOS: INICIALIZAMOS VACÍOS [] PARA NO MOSTRAR DATOS FALSOS ---
   const [products, setProducts] = useState<any[]>([]); 
   const [specialists, setSpecialists] = useState<any[]>([]); 
+  const [services, setServices] = useState<any[]>([]);
   
   // --- NUEVO: ESTADO PARA MOSTRAR TIENDA COMPLETA ---
   const [showFullShop, setShowFullShop] = useState(false);
