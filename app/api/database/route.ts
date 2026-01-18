@@ -5,6 +5,11 @@ export const dynamic = 'force-dynamic';
 
 // Función Helper para Autenticación
 async function getSheets() {
+  // 1. Verificación de Credenciales
+  if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+    throw new Error('Faltan credenciales de Google (GOOGLE_CLIENT_EMAIL o GOOGLE_PRIVATE_KEY) en .env');
+  }
+
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
@@ -29,12 +34,22 @@ export async function GET(request: Request) {
     }
 
     const sheets = await getSheets();
-    // USAMOS SIEMPRE LA VARIABLE DE ENTORNO CORRECTA
-    const spreadsheetId = process.env.NEXT_PUBLIC_SHEET_ID;
+    
+    // 2. Selección Inteligente del ID de la Hoja
+    // Intenta leer NEXT_PUBLIC_SHEET_ID, si no existe, prueba GOOGLE_SHEET_ID
+    const spreadsheetId = process.env.NEXT_PUBLIC_SHEET_ID || process.env.GOOGLE_SHEET_ID;
 
+    if (!spreadsheetId) {
+      return NextResponse.json({ success: false, error: 'No se encontró el ID de la hoja (NEXT_PUBLIC_SHEET_ID) en .env' });
+    }
+
+    // 3. Manejo de Espacios en nombres de pestañas (CRÍTICO para "Clientes Registrados")
+    const safeTabName = tabName.includes(' ') ? `'${tabName}'` : tabName;
+
+    // Leemos un rango amplio para detectar todo
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${tabName}!A:Z`, // Leemos un rango amplio para detectar todo
+      range: `${safeTabName}!A:Z`, 
     });
 
     const rows = response.data.values;
@@ -51,6 +66,7 @@ export async function GET(request: Request) {
       headers.forEach((header, index) => {
         // Limpiamos el header y lo usamos como clave
         const key = header.trim();
+        // Asignamos el valor o string vacío si no existe
         obj[key] = row[index] || ''; 
       });
       return obj;
@@ -59,7 +75,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, data });
 
   } catch (error: any) {
-    console.error(`Database API Error (${request.url}):`, error);
+    console.error(`❌ Error Conexión Sheets (${request.url}):`, error.message);
+    // Devolvemos el error detallado para ver qué pasa en el frontend
     return NextResponse.json({ success: false, error: error.message });
   }
 }
@@ -70,14 +87,16 @@ export async function POST(request: Request) {
     const { tab, data } = body;
 
     const sheets = await getSheets();
-    const spreadsheetId = process.env.NEXT_PUBLIC_SHEET_ID;
+    const spreadsheetId = process.env.NEXT_PUBLIC_SHEET_ID || process.env.GOOGLE_SHEET_ID;
 
-    // Lógica especial para CONFIG: Limpiar antes de escribir para mantenerlo limpio (opcional)
-    // O simplemente añadir al final y que el GET lea el último (más seguro y rápido)
-    
+    if (!spreadsheetId) throw new Error("Falta Spreadsheet ID");
+
+    // Manejo de comillas para pestañas con espacios
+    const safeTabName = tab.includes(' ') ? `'${tab}'` : tab;
+
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `${tab}!A:A`,
+      range: `${safeTabName}!A:A`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [data],
@@ -86,7 +105,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('POST Error:', error);
+    console.error('❌ POST Error:', error.message);
     return NextResponse.json({ success: false, error: error.message });
   }
 }
@@ -97,11 +116,16 @@ export async function PUT(request: Request) {
     const { tab, rowIndex, data } = body;
 
     const sheets = await getSheets();
-    const spreadsheetId = process.env.NEXT_PUBLIC_SHEET_ID;
+    const spreadsheetId = process.env.NEXT_PUBLIC_SHEET_ID || process.env.GOOGLE_SHEET_ID;
+
+    if (!spreadsheetId) throw new Error("Falta Spreadsheet ID");
+
+    // Manejo de comillas para pestañas con espacios
+    const safeTabName = tab.includes(' ') ? `'${tab}'` : tab;
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${tab}!A${rowIndex}`, 
+      range: `${safeTabName}!A${rowIndex}`, 
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [data],
@@ -110,6 +134,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error('❌ PUT Error:', error.message);
     return NextResponse.json({ success: false, error: error.message });
   }
 }
