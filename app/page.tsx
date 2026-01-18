@@ -328,7 +328,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             <div className="grid grid-cols-2 gap-3 md:gap-4">
               
               {filteredSpecialists.length > 0 ? (
-                  filteredSpecialists.map((spec) => {
+                  filteredSpecialists.map((spec: any) => {
                     const imgUrl = processGoogleImage(spec.img);
                     return (
                     <div key={spec.id} onClick={() => { setSelectedSpecialist(spec); setStep(2); }} className="flex items-center gap-4 p-3 border border-white/50 rounded-2xl hover:border-[#96765A]/50 hover:bg-white/60 hover:shadow-md cursor-pointer transition-all group bg-white/30">
