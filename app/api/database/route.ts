@@ -27,6 +27,7 @@ async function getSheets() {
 export async function GET(request: Request) {
   let spreadsheetId = "";
   let tabName = "";
+  let sheets: any = null;
 
   try {
     const { searchParams } = new URL(request.url);
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Falta el nombre de la pestaña (tab)' });
     }
 
-    const sheets = await getSheets();
+    sheets = await getSheets();
     
     // 2. Selección Inteligente del ID de la Hoja
     spreadsheetId = process.env.NEXT_PUBLIC_SHEET_ID || process.env.GOOGLE_SHEET_ID || "";
@@ -47,9 +48,10 @@ export async function GET(request: Request) {
     }
 
     // 3. Manejo de Espacios: Si tiene espacios, debe ir entre comillas simples 'Nombre Hoja'
-    const safeTabName = tabName.includes(' ') && !tabName.startsWith("'") ? `'${tabName}'` : tabName;
+    // IMPORTANTE: Siempre usamos comillas simples para ser seguros con nombres complejos
+    const safeTabName = `'${tabName.replace(/'/g, '')}'`; 
 
-    console.log(`📡 Conectando a Sheet: ${spreadsheetId.substring(0, 5)}... | Tab: ${safeTabName}`);
+    console.log(`📡 Intentando leer: ${spreadsheetId.substring(0, 5)}... | Pestaña: ${safeTabName}`);
 
     // Leemos un rango amplio para detectar todo
     const response = await sheets.spreadsheets.values.get({
@@ -66,9 +68,9 @@ export async function GET(request: Request) {
     // --- MAGIA: CONVERTIR FILAS A OBJETOS ---
     // Usamos la primera fila como "Claves" (Headers) para crear el objeto JSON
     const headers = rows[0]; 
-    const data = rows.slice(1).map((row, rowIndex) => {
+    const data = rows.slice(1).map((row: any[], rowIndex: number) => {
       const obj: any = { rowIndex: rowIndex + 2 }; // Índice real en Excel (1-based, saltando header)
-      headers.forEach((header, index) => {
+      headers.forEach((header: string, index: number) => {
         // Limpiamos el header y lo usamos como clave
         if (header) {
             const key = header.trim();
@@ -84,19 +86,33 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error(`❌ Error Conexión Sheets (${request.url}):`, error.message);
     
-    // Manejo específico de errores comunes para ayudar al usuario
+    // DIAGNÓSTICO AVANZADO
     if (error.code === 403) {
         return NextResponse.json({ 
             success: false, 
-            error: `PERMISO DENEGADO. Comparte tu hoja con: ${process.env.GOOGLE_CLIENT_EMAIL}` 
+            error: `PERMISO DENEGADO. Asegúrate de compartir tu hoja de Google Sheets con el correo: ${process.env.GOOGLE_CLIENT_EMAIL} (Editor)` 
         });
     }
     
-    if (error.code === 404 || error.message.includes('Unable to parse range')) {
-        return NextResponse.json({ 
-            success: false, 
-            error: `NO ENCONTRADO. Revisa: 1. Nombre de pestaña "${tabName}" sea exacto. 2. ID hoja "${spreadsheetId}" sea correcto.` 
-        });
+    // Si no encuentra la pestaña o el rango es inválido, intentamos listar las pestañas disponibles
+    if (error.code === 400 || error.code === 404 || error.message.includes('Unable to parse range') || error.message.includes('range')) {
+        try {
+            if (sheets && spreadsheetId) {
+                const metadata = await sheets.spreadsheets.get({ spreadsheetId });
+                const availableTabs = metadata.data.sheets?.map((s: any) => s.properties?.title).join(', ');
+                
+                return NextResponse.json({ 
+                    success: false, 
+                    error: `Error: No se encontró la pestaña "${tabName}". Pestañas disponibles en tu hoja: [ ${availableTabs} ]` 
+                });
+            }
+        } catch (metaError) {
+            // Si falla la metadata, probablemente el ID es incorrecto
+            return NextResponse.json({ 
+                success: false, 
+                error: `Error Crítico: No se pudo conectar a la hoja con ID "${spreadsheetId}". Verifica que el ID sea correcto en tu archivo .env` 
+            });
+        }
     }
 
     // Devolvemos el error detallado para ver qué pasa en el frontend
@@ -114,8 +130,8 @@ export async function POST(request: Request) {
 
     if (!spreadsheetId) throw new Error("Falta Spreadsheet ID");
 
-    // Manejo de comillas para pestañas con espacios
-    const safeTabName = tab.includes(' ') && !tab.startsWith("'") ? `'${tab}'` : tab;
+    // Manejo seguro de nombre de pestaña
+    const safeTabName = `'${tab.replace(/'/g, '')}'`;
 
     await sheets.spreadsheets.values.append({
       spreadsheetId,
@@ -143,8 +159,8 @@ export async function PUT(request: Request) {
 
     if (!spreadsheetId) throw new Error("Falta Spreadsheet ID");
 
-    // Manejo de comillas para pestañas con espacios
-    const safeTabName = tab.includes(' ') && !tab.startsWith("'") ? `'${tab}'` : tab;
+    // Manejo seguro de nombre de pestaña
+    const safeTabName = `'${tab.replace(/'/g, '')}'`;
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
