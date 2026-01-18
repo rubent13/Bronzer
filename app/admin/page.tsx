@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+// Nota: No importamos Image de next/image para usar img nativa y evitar bloqueos
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Calendar, Users, ShoppingBag, Sparkles, 
@@ -8,7 +9,7 @@ import {
   TrendingUp, DollarSign, Clock, Save, Phone, FileText, RefreshCw, Tag,
   Download, Loader2, Menu, X, Bell, ChevronRight, BarChart3, Home,
   Gift, Palette, Image as ImageIcon, Send, Mail as MailIcon, CheckSquare, Square,
-  Megaphone, CreditCard
+  Megaphone, CreditCard, Percent
 } from 'lucide-react';
 import { Cinzel, Montserrat } from 'next/font/google';
 
@@ -45,7 +46,7 @@ export default function AdminPanel() {
   // Estados de Formularios
   const [loginData, setLoginData] = useState({ user: "", pass: "" });
 
-  // --- ESTADO BANNER (NUEVO) ---
+  // --- ESTADO BANNER ---
   const [bannerConfig, setBannerConfig] = useState({
     active: true,
     text: "Envíos Gratis en compras mayores a $50 ✨",
@@ -59,7 +60,10 @@ export default function AdminPanel() {
   const [editSpecialist, setEditSpecialist] = useState<any>(null); 
   const [productModal, setProductModal] = useState<any>(null); 
   const [serviceModal, setServiceModal] = useState<any>(null); 
+  
+  // Modal Marketing Actualizado
   const [marketingModal, setMarketingModal] = useState<any>(null); 
+  const [clientSearch, setClientSearch] = useState(""); // Estado para búsqueda de clientes
   
   const [isCreating, setIsCreating] = useState(false);
 
@@ -321,7 +325,25 @@ export default function AdminPanel() {
           alert("⚠️ Por favor selecciona al menos un cliente.");
           return;
       }
-      
+
+      // Validar valor del descuento
+      if ((marketingModal.couponType === 'discount' || marketingModal.couponType === 'giftcard') && !marketingModal.couponValue) {
+          alert("⚠️ Por favor ingresa el valor del descuento o gift card.");
+          return;
+      }
+
+      // Datos del Cupón/Regalo
+      const couponData = {
+          title: marketingModal.title,
+          type: marketingModal.couponType || 'discount',
+          value: marketingModal.couponValue, // NUEVO: Valor para cálculo automático
+          target: marketingModal.couponTarget || 'all',
+          singleUse: true, 
+          clients: marketingModal.selectedEmails
+      };
+
+      console.log("Enviando Cupón:", couponData);
+
       const today = new Date().toLocaleDateString('es-VE');
       const updatedClients = clients.map(c => {
           if (marketingModal.selectedEmails.includes(c.Email)) {
@@ -333,6 +355,7 @@ export default function AdminPanel() {
 
       alert(`🎉 Promoción "${marketingModal.title}" enviada a ${marketingModal.selectedEmails.length} clientes.`);
       setMarketingModal(null);
+      setClientSearch(""); // Limpiar búsqueda
   };
 
   const toggleClientSelection = (email: string) => {
@@ -351,6 +374,12 @@ export default function AdminPanel() {
           selectedEmails: allSelected ? [] : clients.map(c => c.Email) 
       });
   };
+
+  // Filtrar clientes para búsqueda
+  const filteredClients = clients.filter(client => 
+      client.Nombre?.toLowerCase().includes(clientSearch.toLowerCase()) || 
+      client.Email?.toLowerCase().includes(clientSearch.toLowerCase())
+  );
 
   // --- RENDER ---
   if (!isAuthenticated) {
@@ -469,6 +498,8 @@ export default function AdminPanel() {
                                 <p className="text-xs text-[#D4AF37] font-bold mt-3 uppercase tracking-wide flex items-center gap-2"><span className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full"></span> {res.service}</p>
                             </div>
                             <div className="flex gap-2 border-t pt-3 md:border-t-0 md:pt-0 mt-1 md:mt-0">
+                                {/* BOTÓN GESTIONAR RESTAURADO */}
+                                <button onClick={() => setEditBooking(res)} className="flex-1 md:flex-none bg-black text-white py-2.5 px-6 rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-[#D4AF37] transition-colors">Gestionar</button>
                                 <button onClick={() => deleteBooking(res.id)} className="px-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100"><Trash2 size={16}/></button>
                             </div>
                         </div>
@@ -662,7 +693,7 @@ export default function AdminPanel() {
                         {/* MODAL MARKETING COMPLETO */}
                         {marketingModal && (
                             <div className="space-y-6">
-                                {/* SELECCION DE USUARIOS */}
+                                {/* SELECCION DE USUARIOS CON BUSCADOR */}
                                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                                     <div className="flex justify-between items-center mb-3">
                                         <label className="text-[10px] uppercase font-bold text-gray-500">Destinatarios</label>
@@ -670,8 +701,20 @@ export default function AdminPanel() {
                                             {marketingModal.selectedEmails?.length === clients.length ? 'Deseleccionar Todos' : 'Seleccionar Todos'}
                                         </button>
                                     </div>
+                                    {/* LUPA DE BÚSQUEDA */}
+                                    <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200 mb-3">
+                                        <Search size={14} className="text-gray-400" />
+                                        <input 
+                                            className="w-full text-xs outline-none text-gray-600 placeholder:text-gray-400" 
+                                            placeholder="Buscar cliente..." 
+                                            value={clientSearch}
+                                            onChange={(e) => setClientSearch(e.target.value)}
+                                        />
+                                    </div>
+
                                     <div className="max-h-32 overflow-y-auto space-y-1 custom-scrollbar">
-                                        {clients.map((client, i) => {
+                                        {/* FILTRADO DE CLIENTES */}
+                                        {filteredClients.map((client, i) => {
                                             const isSelected = marketingModal.selectedEmails?.includes(client.Email);
                                             return (
                                                 <div key={i} onClick={() => toggleClientSelection(client.Email)} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer text-xs ${isSelected ? 'bg-white border border-[#D4AF37]/30 shadow-sm' : 'hover:bg-gray-100'}`}>
@@ -705,6 +748,25 @@ export default function AdminPanel() {
                                     </div>
                                 </div>
 
+                                {/* INPUT DE VALOR (NUEVO) */}
+                                {(marketingModal.couponType === 'discount' || marketingModal.couponType === 'giftcard') && (
+                                    <div>
+                                        <label className="text-[10px] uppercase font-bold text-gray-400 mb-2 block">
+                                            {marketingModal.couponType === 'discount' ? 'Porcentaje de Descuento' : 'Monto Gift Card ($)'}
+                                        </label>
+                                        <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                            {marketingModal.couponType === 'discount' ? <Percent size={14} className="text-[#D4AF37]"/> : <DollarSign size={14} className="text-[#D4AF37]"/>}
+                                            <input 
+                                                type="number" 
+                                                className="bg-transparent w-full text-sm outline-none font-bold text-[#191919]" 
+                                                placeholder={marketingModal.couponType === 'discount' ? '20' : '50.00'} 
+                                                value={marketingModal.couponValue || ''} 
+                                                onChange={e => setMarketingModal({...marketingModal, couponValue: e.target.value})} 
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* VISUALIZADOR */}
                                 <div 
                                     className="w-full h-48 rounded-2xl flex flex-col items-center justify-center text-center p-6 shadow-md relative overflow-hidden transition-all duration-300"
@@ -724,11 +786,15 @@ export default function AdminPanel() {
                                     <div className="relative z-10">
                                         <Gift size={24} className="mx-auto mb-2 opacity-80"/>
                                         <h3 className={`${cinzel.className} text-2xl font-bold mb-1`}>{marketingModal.title || "Tu Título"}</h3>
+                                        {marketingModal.couponValue && (
+                                            <p className="text-3xl font-black mb-2 tracking-tighter">
+                                                {marketingModal.couponType === 'discount' ? `${marketingModal.couponValue}% OFF` : `$${marketingModal.couponValue}`}
+                                            </p>
+                                        )}
                                         <p className="text-[10px] opacity-80 uppercase tracking-widest border border-current px-2 py-1 rounded inline-block">
-                                            {marketingModal.couponType === 'discount' ? 'CUPÓN DESCUENTO' : 'GIFT CARD'}
+                                            {marketingModal.couponType === 'discount' ? 'CUPÓN DESCUENTO' : (marketingModal.couponType === 'giftcard' ? 'GIFT CARD' : 'REGALO')}
                                         </p>
                                         <p className="text-[9px] mt-2 opacity-60">Válido para: {marketingModal.couponTarget?.toUpperCase()}</p>
-                                        <p className="text-[8px] mt-1 opacity-60">Válido una sola vez</p>
                                     </div>
                                 </div>
 
