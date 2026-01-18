@@ -849,7 +849,6 @@ export default function BronzerFullPlatform() {
  // --- ESTADOS: INICIALIZAMOS VACÍOS [] PARA NO MOSTRAR DATOS FALSOS ---
   const [products, setProducts] = useState<any[]>([]); 
   const [specialists, setSpecialists] = useState<any[]>([]); 
-  const [services, setServices] = useState<any[]>([]); 
   
   // --- NUEVO: ESTADO PARA MOSTRAR TIENDA COMPLETA ---
   const [showFullShop, setShowFullShop] = useState(false);
