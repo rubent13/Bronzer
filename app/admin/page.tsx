@@ -24,13 +24,19 @@ import {
   FileText, 
   RefreshCw, 
   Tag,
-  Download,   // Nuevo
-  Loader2,    // Nuevo
-  Menu,       // Nuevo
-  X,          // Nuevo
-  Home,       // Nuevo
-  BarChart3,   // Nuevo
-  ChevronRight // Nuevo
+  Download,   
+  Loader2,    
+  Menu,       
+  X,          
+  Home,       
+  BarChart3,   
+  ChevronRight,
+  // --- NUEVOS ICONOS ---
+  Gift,
+  CheckSquare,
+  Square,
+  Image as ImageIcon,
+  Send
 } from 'lucide-react';
 import { Cinzel, Montserrat } from 'next/font/google';
 
@@ -43,6 +49,8 @@ const INITIAL_RESERVATIONS: any[] = [];
 const INITIAL_PRODUCTS: any[] = [];
 const INITIAL_TEAM: any[] = [];
 const INITIAL_SERVICES: any[] = [];
+// --- NUEVO ---
+const INITIAL_CLIENTS: any[] = [];
 
 export default function AdminPanel() {
   // --- ESTADOS ORIGINALES ---
@@ -56,14 +64,12 @@ export default function AdminPanel() {
   const [products, setProducts] = useState<any[]>(INITIAL_PRODUCTS);
   const [team, setTeam] = useState<any[]>(INITIAL_TEAM);
   const [services, setServices] = useState<any[]>(INITIAL_SERVICES); 
+  // --- NUEVO ESTADO DE CLIENTES ---
+  const [clients, setClients] = useState<any[]>(INITIAL_CLIENTS);
   
   // Estado Ventas
   const [salesStats, setSalesStats] = useState({ total: 0, orders: 0 });
-  
-  // AGREGAR ESTO: Estado para las ventas mensuales (array de 12 posiciones iniciadas en 0)
   const [monthlySales, setMonthlySales] = useState<number[]>(new Array(12).fill(0));
-
-  // AGREGAR ESTA LÍNEA: Controla qué barra se está tocando en el móvil
   const [activeChartIndex, setActiveChartIndex] = useState<number | null>(null);
 
   // Estados de Formularios
@@ -72,26 +78,43 @@ export default function AdminPanel() {
   // --- MODALES ORIGINALES ---
   const [editBooking, setEditBooking] = useState<any>(null); 
   const [editSpecialist, setEditSpecialist] = useState<any>(null); 
-  
-  // Modales Productos y Servicios
   const [productModal, setProductModal] = useState<any>(null); 
   const [serviceModal, setServiceModal] = useState<any>(null); 
+  
+  // --- NUEVO MODAL DE MARKETING ---
+  const [marketingModal, setMarketingModal] = useState(false);
   
   // Estado genérico para saber si estamos creando o editando
   const [isCreating, setIsCreating] = useState(false);
 
   // --- NUEVOS ESTADOS (PARA EL DISEÑO PWA Y CARGA) ---
-  const [isDataReady, setIsDataReady] = useState(false); // Pantalla de carga inicial
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Menú lateral móvil
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null); // Instalación PWA
-  const [isAppInstalled, setIsAppInstalled] = useState(false); // Estado PWA
-  const [isMobile, setIsMobile] = useState(false); // Detector Móvil
-  const [userName, setUserName] = useState('Admin'); // Nombre Usuario
+  const [isDataReady, setIsDataReady] = useState(false); 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null); 
+  const [isAppInstalled, setIsAppInstalled] = useState(false); 
+  const [isMobile, setIsMobile] = useState(false); 
+  const [userName, setUserName] = useState('Admin'); 
+
+  // --- NUEVOS ESTADOS PARA GESTIÓN DE CUPONES ---
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [clientSearch, setClientSearch] = useState("");
+  const [couponConfig, setCouponConfig] = useState({
+      type: 'discount',
+      title: '¡SORPRESA!',
+      value: '20%',
+      code: 'BRONZER2025',
+      bgColor: '#000000',
+      color2: '#333333', // NUEVO: Segundo color para degradado
+      isGradient: false, // NUEVO: Activar degradado
+      textColor: '#D4AF37',
+      message: 'Disfruta de este regalo exclusivo para ti.',
+      customImage: null as string | null,
+      scope: 'all', // NUEVO: 'all', 'service', 'product'
+      selectedItem: '' // NUEVO: Nombre del servicio o producto
+  });
 
   // Fecha Actual
   const currentDate = new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' });
-  
-  // Saludo según la hora
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Buenos Días' : currentHour < 18 ? 'Buenas Tardes' : 'Buenas Noches';
 
@@ -101,9 +124,8 @@ export default function AdminPanel() {
     if (loginData.user === "admin" && loginData.pass === "bronzer2025") {
       setIsAuthenticated(true);
       setUserName(loginData.user ? (loginData.user.charAt(0).toUpperCase() + loginData.user.slice(1)) : 'Admin');
-      // Activamos la carga de datos
       await fetchAllData();
-      setIsDataReady(true); // Datos listos, ocultar pantalla de carga
+      setIsDataReady(true); 
     } else {
       alert("Credenciales Incorrectas");
     }
@@ -112,15 +134,13 @@ export default function AdminPanel() {
   // --- DETECTAR PWA Y RESIZE ---
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
-    handleResize(); // Check inicial
+    handleResize(); 
     window.addEventListener('resize', handleResize);
 
-    // Detectar si está instalada
     if (window.matchMedia('(display-mode: standalone)').matches) {
         setIsAppInstalled(true);
     }
 
-    // Capturar evento de instalación
     const handleBeforeInstallPrompt = (e: any) => {
         e.preventDefault();
         setDeferredPrompt(e);
@@ -150,10 +170,8 @@ export default function AdminPanel() {
     if (!url || typeof url !== 'string') return null;
     
     let id = null;
-    // Formato 1: .../d/EL_ID/...
     const matchD = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
     if (matchD && matchD[1]) id = matchD[1];
-    // Formato 2: ...id=EL_ID...
     else {
         const matchId = url.match(/id=([a-zA-Z0-9_-]+)/);
         if (matchId && matchId[1]) id = matchId[1];
@@ -168,7 +186,7 @@ export default function AdminPanel() {
   const fetchAllData = async () => {
     setIsLoadingGoogle(true);
     try {
-      // 1. Cargar Citas (Google Calendar)
+      // 1. Cargar Citas
       const resCal = await fetch('/api/calendar'); 
       const dataCal = await resCal.json();
       if (dataCal.success) {
@@ -194,37 +212,39 @@ export default function AdminPanel() {
         setReservations(googleBookings);
       }
 
-      // 2. Cargar Productos (Google Sheets)
+      // 2. Cargar Productos
       const resProd = await fetch('/api/database?tab=Productos');
       const dataProd = await resProd.json();
       if (dataProd.success) setProducts(dataProd.data);
 
-      // 3. Cargar Equipo (Google Sheets)
+      // 3. Cargar Equipo
       const resTeam = await fetch('/api/database?tab=ESPECIALISTAS'); 
       const dataTeam = await resTeam.json();
       if (dataTeam.success) setTeam(dataTeam.data);
 
-      // 4. Cargar Servicios (NUEVO - Google Sheets)
+      // 4. Cargar Servicios
       const resServ = await fetch('/api/database?tab=Servicios');
       const dataServ = await resServ.json();
       if (dataServ.success) setServices(dataServ.data);
 
-      // 5. Cargar Ventas (Google Sheets)
+      // --- NUEVO: 5. CARGAR CLIENTES REGISTRADOS ---
+      const resClients = await fetch('/api/database?tab=Clientes Registrados');
+      const dataClients = await resClients.json();
+      if (dataClients.success) setClients(dataClients.data);
+
+      // 6. Cargar Ventas
       const resSales = await fetch('/api/database?tab=Ventas');
       const dataSales = await resSales.json();
       if (dataSales.success) {
         const salesData = dataSales.data;
-        // Calcular totales generales
         const totalAmount = salesData.reduce((acc: number, curr: any) => acc + (Number(curr.total) || 0), 0);
         setSalesStats({ total: totalAmount, orders: salesData.length });
 
-        // AGREGAR ESTO: Lógica para agrupar ventas por mes
         const salesByMonth = new Array(12).fill(0);
         salesData.forEach((sale: any) => {
-            // Asegúrate que en tu Google Sheet la columna de fecha se llame 'date' o 'fecha'
             const saleDate = new Date(sale.date || sale.fecha || new Date()); 
             if (!isNaN(saleDate.getTime())) {
-                const monthIndex = saleDate.getMonth(); // 0 = Enero, 11 = Diciembre
+                const monthIndex = saleDate.getMonth();
                 salesByMonth[monthIndex] += Number(sale.total) || 0;
             }
         });
@@ -240,7 +260,6 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      // Si entramos y no hay datos, forzamos carga
       if (!isDataReady) {
          fetchAllData().then(() => setIsDataReady(true));
       }
@@ -249,7 +268,8 @@ export default function AdminPanel() {
     }
   }, [isAuthenticated]);
 
-  // --- LÓGICA DE RESERVAS (PUT/DELETE) ---
+  // --- LÓGICA DE RESERVAS, PRODUCTOS, SERVICIOS, EQUIPO ---
+  // (Mantengo estas funciones igual que en tu código original)
   const saveBookingEdit = async () => {
     if (!editBooking) return;
     setIsProcessing(true);
@@ -297,7 +317,6 @@ export default function AdminPanel() {
     }
   };
 
-  // --- LÓGICA DE PRODUCTOS ---
   const openNewProductModal = () => {
       setIsCreating(true);
       setProductModal({ 
@@ -314,24 +333,20 @@ export default function AdminPanel() {
   const saveProduct = async () => {
       if (!productModal) return;
       setIsProcessing(true);
-
       const rowData = [
           productModal.id, productModal.name, productModal.price, productModal.stock,
           productModal.img, productModal.description || '', productModal.promotion || ''
       ];
-
       try {
           const method = isCreating ? 'POST' : 'PUT';
           const body = isCreating 
             ? { tab: 'Productos', data: rowData }
             : { tab: 'Productos', rowIndex: productModal.rowIndex, data: rowData };
-
           const res = await fetch('/api/database', {
               method,
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(body)
           });
-
           const data = await res.json();
           if (data.success) {
               alert(isCreating ? "✅ Producto Creado." : "✅ Producto Actualizado.");
@@ -344,13 +359,12 @@ export default function AdminPanel() {
       finally { setIsProcessing(false); }
   };
 
-  // --- LÓGICA DE SERVICIOS (NUEVO) ---
   const openNewServiceModal = () => {
       setIsCreating(true);
       setServiceModal({ 
           id: `S-${Date.now().toString().slice(-6)}`, 
           name: '', price: 0, duration: '60 min', category: 'General', description: '', img: '',
-          specialists: '' // Campo para guardar especialistas asignados (separados por comas)
+          specialists: ''
       });
   };
 
@@ -362,26 +376,21 @@ export default function AdminPanel() {
   const saveService = async () => {
       if (!serviceModal) return;
       setIsProcessing(true);
-
-      // Array ordenado para Excel: [ID, Nombre, Precio, Duracion, Categoria, Descripcion, Imagen, ESPECIALISTAS]
       const rowData = [
           serviceModal.id, serviceModal.name, serviceModal.price, serviceModal.duration,
           serviceModal.category, serviceModal.description || '', serviceModal.img || '',
-          serviceModal.specialists || '' // Columna para especialistas asignados
+          serviceModal.specialists || ''
       ];
-
       try {
           const method = isCreating ? 'POST' : 'PUT';
           const body = isCreating 
             ? { tab: 'Servicios', data: rowData }
             : { tab: 'Servicios', rowIndex: serviceModal.rowIndex, data: rowData };
-
           const res = await fetch('/api/database', {
               method,
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(body)
           });
-
           const data = await res.json();
           if (data.success) {
               alert(isCreating ? "✅ Servicio Creado." : "✅ Servicio Actualizado.");
@@ -394,16 +403,13 @@ export default function AdminPanel() {
       finally { setIsProcessing(false); }
   };
 
-  // --- LÓGICA DE ESPECIALISTAS ---
   const saveSpecialistEdit = async () => {
     if (!editSpecialist) return;
     setIsProcessing(true);
-    
     const rowData = [
         editSpecialist.id, editSpecialist.name, editSpecialist.role, editSpecialist.img,
         editSpecialist.schedule, editSpecialist.specialty || '', editSpecialist.experience || '', editSpecialist.certified || '', editSpecialist.services || ''
     ];
-
     try {
         const res = await fetch('/api/database', {
             method: 'PUT',
@@ -429,15 +435,92 @@ export default function AdminPanel() {
     }
   };
 
-  const deleteProduct = (id: number) => {
-    if(confirm("Para eliminar, hazlo desde Google Sheets.")) {
-       // Manual delete reminder
-    }
+  // --- LÓGICA DE MARKETING (NUEVO) ---
+  const handleSelectClient = (email: string) => {
+      if (selectedClients.includes(email)) {
+          setSelectedClients(selectedClients.filter(e => e !== email));
+      } else {
+          setSelectedClients([...selectedClients, email]);
+      }
+  };
+
+  const handleSelectAll = () => {
+      const visibleClients = clients.filter(c => 
+          c.Nombre?.toLowerCase().includes(clientSearch.toLowerCase()) || 
+          c.Email?.toLowerCase().includes(clientSearch.toLowerCase())
+      );
+      if (selectedClients.length === visibleClients.length && visibleClients.length > 0) {
+          setSelectedClients([]);
+      } else {
+          setSelectedClients(visibleClients.map(c => c.Email));
+      }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              setCouponConfig({ ...couponConfig, customImage: reader.result as string });
+          };
+          reader.readAsDataURL(file);
+      }
+  };
+
+  // --- ACTUALIZACIÓN: LÓGICA REAL DE ENVÍO (GOOGLE SHEETS) ---
+  const sendCampaign = async () => {
+      // 1. Validaciones
+      if (selectedClients.length === 0) return alert("Selecciona al menos un cliente.");
+      
+      setIsProcessing(true);
+
+      try {
+          // 2. Creamos una promesa de envío por cada cliente seleccionado
+          const promises = selectedClients.map(async (email) => {
+              
+              // Estructura exacta para tu Excel (Pestaña 'cupones'): 
+              // A:Email, B:Titulo, C:Tipo, D:Valor, E:Target, F:BgColor, G:Text, H:Color, I:Imagen
+              const rowData = [
+                  email,                      // A: Email del cliente
+                  couponConfig.title,         // B: Título
+                  couponConfig.type,          // C: Tipo (discount, gift...)
+                  couponConfig.value,         // D: Valor (20%, 50€...)
+                  selectedClients.length > 1 ? 'Masivo' : 'Individual', // E: Target
+                  couponConfig.bgColor,       // F: Fondo
+                  couponConfig.message,       // G: Mensaje
+                  couponConfig.textColor,     // H: Color Texto
+                  couponConfig.customImage || '' // I: Imagen (si hay)
+              ];
+
+              // Llamada a la API para guardar en la pestaña 'cupones'
+              await fetch('/api/database', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                      tab: 'cupones', 
+                      data: rowData 
+                  })
+              });
+          });
+
+          // 3. Esperar a que se guarden todos los registros
+          await Promise.all(promises);
+
+          // 4. Éxito
+          alert(`✅ ¡Campaña enviada y guardada con éxito para ${selectedClients.length} usuarios!`);
+          setMarketingModal(false);
+          setSelectedClients([]);
+          
+      } catch (error) {
+          console.error(error);
+          alert("Hubo un error al guardar los cupones en la base de datos.");
+      } finally {
+          setIsProcessing(false);
+      }
   };
 
   // --- RENDERIZADO DE PANTALLAS ---
 
-  // 1. PANTALLA DE LOGIN
   if (!isAuthenticated) {
     return (
       <div className={`h-screen w-full bg-[#050505] flex items-center justify-center ${montserrat.className}`}>
@@ -468,8 +551,6 @@ export default function AdminPanel() {
     );
   }
 
-  // 2. PANTALLA DE CARGA (NUEVO)
-  // Se muestra solo si está autenticado pero los datos no han terminado de cargar
   if (isAuthenticated && !isDataReady) {
     return (
         <div className={`h-screen w-full bg-[#0a0a0a] flex flex-col items-center justify-center text-white ${montserrat.className}`}>
@@ -486,11 +567,9 @@ export default function AdminPanel() {
     );
   }
 
-  // 3. DASHBOARD PRINCIPAL
   return (
     <div className={`h-screen flex bg-slate-50 overflow-hidden ${montserrat.className}`}>
       
-      {/* BOTÓN FLOTANTE PARA INSTALAR APP (SOLO MÓVIL Y NO INSTALADA) */}
       {!isAppInstalled && (deferredPrompt || isMobile) && (
         <motion.button 
           initial={{ y: 100 }} animate={{ y: 0 }} transition={{ delay: 1 }}
@@ -517,7 +596,7 @@ export default function AdminPanel() {
             ))}
 
             <p className="text-[10px] uppercase text-black-400 font-bold px-4 mb-2 mt-6">Gestión</p>
-            {[{ id: "services", label: "Servicios", icon: Sparkles }, { id: "products", label: "Inventario", icon: ShoppingBag }, { id: "team", label: "Equipo", icon: Users }].map(item => (
+            {[{ id: "services", label: "Servicios", icon: Sparkles }, { id: "products", label: "Inventario", icon: ShoppingBag }, { id: "team", label: "Equipo", icon: Users }, { id: "clients", label: "Clientes", icon: Users }].map(item => (
                 <button key={item.id} onClick={() => {setActiveTab(item.id)}} 
                     className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm rounded-xl transition-all ${activeTab === item.id ? 'bg-[#0a0a0a] text-white shadow-lg shadow-black/20' : 'text-gray-500 hover:bg-gray-50'}`}>
                     <item.icon size={18} className={activeTab === item.id ? "text-[#D4AF37]" : ""} /> {item.label}
@@ -534,7 +613,7 @@ export default function AdminPanel() {
 
       {/* --- BARRA DE NAVEGACIÓN INFERIOR (MÓVIL) --- */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-lg border-t border-gray-200 flex justify-around items-center p-2 z-50 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.03)]">
-          {[{ id: "overview", icon: Home, label: "Inicio" }, { id: "bookings", icon: Calendar, label: "Citas" }, { id: "products", icon: ShoppingBag, label: "Inv" }, { id: "services", icon: Sparkles, label: "Serv" }, { id: "team", icon: Users, label: "Equipo" }].map(t => (
+          {[{ id: "overview", icon: Home, label: "Inicio" }, { id: "bookings", icon: Calendar, label: "Citas" }, { id: "products", icon: ShoppingBag, label: "Inv" }, { id: "clients", icon: Users, label: "Clientes" }].map(t => (
               <button key={t.id} onClick={() => setActiveTab(t.id)} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === t.id ? 'text-[#D4AF37]' : 'text-black-400'}`}>
                   <t.icon size={22} strokeWidth={activeTab === t.id ? 2.5 : 2} />
                   <span className="text-[9px] font-medium">{t.label}</span>
@@ -545,7 +624,6 @@ export default function AdminPanel() {
       {/* --- ÁREA PRINCIPAL --- */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         
-        {/* HEADER */}
         <header className="h-auto py-6 md:h-24 bg-white/80 backdrop-blur-md border-b border-gray-100 flex flex-col justify-center px-6 md:px-10 shrink-0 sticky top-0 z-30">
             <div className="flex justify-between items-start">
                 <div>
@@ -568,7 +646,6 @@ export default function AdminPanel() {
             </div>
         </header>
 
-        {/* CONTENIDO SCROLLABLE */}
         <div className="flex-1 overflow-y-auto p-4 md:p-10 pb-24 md:pb-10 scroll-smooth">
             
             {/* VISTA: OVERVIEW */}
@@ -593,11 +670,8 @@ export default function AdminPanel() {
                          </div>
                     </div>
 
-                    {/* Gráfica Moderna (Compatible con Táctil) */}
                     <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden">
-                        {/* Decoración de fondo */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-[#D4AF37]/5 to-transparent rounded-bl-full pointer-events-none"></div>
-
                         <div className="flex justify-between items-center mb-8 relative z-10">
                             <div>
                                 <h3 className={`${cinzel.className} text-lg md:text-xl flex items-center gap-2 text-[#0a0a0a]`}>
@@ -607,23 +681,20 @@ export default function AdminPanel() {
                             </div>
                             <span className="text-xs bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg text-gray-600">2025</span>
                         </div>
-
-                        {/* Contenedor de las Barras */}
                         <div className="h-56 md:h-64 flex items-end justify-between gap-2 md:gap-4 px-2 relative z-10">
                              {monthlySales.map((amount, i) => {
                                  const maxSales = Math.max(...monthlySales, 100);
                                  const heightPercentage = Math.round((amount / maxSales) * 100);
-                                 const isActive = activeChartIndex === i; // ¿Esta barra está activa?
+                                 const isActive = activeChartIndex === i; 
                                  
                                  return (
                                      <div 
                                         key={i} 
                                         className="w-full flex flex-col justify-end group cursor-pointer h-full relative"
-                                        onClick={() => setActiveChartIndex(isActive ? null : i)} // Tocar para ver/ocultar en móvil
-                                        onMouseEnter={() => setActiveChartIndex(i)} // Hover en PC
-                                        onMouseLeave={() => setActiveChartIndex(null)} // Salir en PC
+                                        onClick={() => setActiveChartIndex(isActive ? null : i)}
+                                        onMouseEnter={() => setActiveChartIndex(i)} 
+                                        onMouseLeave={() => setActiveChartIndex(null)}
                                      >
-                                         {/* Tooltip: Aparece si está activo (click/hover) */}
                                          <div className={`
                                             transition-all duration-200 absolute -top-2 left-1/2 -translate-x-1/2 
                                             bg-[#0a0a0a] text-[#D4AF37] text-[10px] font-bold py-1 px-2 rounded-md shadow-xl z-20 whitespace-nowrap mb-2 
@@ -632,8 +703,6 @@ export default function AdminPanel() {
                                          `}>
                                             €{amount.toLocaleString()}
                                          </div>
-                                         
-                                         {/* Barra Animada */}
                                          <div className="w-full bg-gray-100 rounded-t-lg relative overflow-hidden h-full flex items-end">
                                              <motion.div 
                                                 initial={{ height: 0 }} 
@@ -641,9 +710,7 @@ export default function AdminPanel() {
                                                 transition={{ duration: 1, ease: "easeOut", delay: i * 0.05 }}
                                                 className={`w-full relative transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70'}`}
                                              >
-                                                {/* Gradiente */}
                                                 <div className="absolute inset-0 bg-gradient-to-t from-[#D4AF37] to-[#F2D06B]"></div>
-                                                {/* Brillo superior */}
                                                 <div className="absolute top-0 left-0 w-full h-[2px] bg-white/60"></div>
                                              </motion.div>
                                          </div>
@@ -651,8 +718,6 @@ export default function AdminPanel() {
                                  );
                              })}
                         </div>
-
-                        {/* Etiquetas de los meses */}
                         <div className="flex justify-between mt-4 text-[8px] md:text-[10px] text-gray-400 font-bold uppercase border-t border-gray-100 pt-4 relative z-10">
                              {['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((m, i) => (
                                 <span key={i} className={`text-center w-full transition-colors ${activeChartIndex === i ? 'text-[#D4AF37]' : ''}`}>{m}</span>
@@ -694,7 +759,7 @@ export default function AdminPanel() {
                 </div>
             )}
 
-            {/* VISTA: PRODUCTOS (GRID 2 COLUMNAS MOVIL) */}
+            {/* VISTA: PRODUCTOS */}
             {activeTab === 'products' && (
                 <div className="animate-in fade-in zoom-in duration-300">
                     <button onClick={openNewProductModal} className="w-full md:w-auto bg-black text-white px-6 py-4 rounded-xl text-xs uppercase tracking-widest mb-6 flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] transition-transform"><Plus size={16}/> Agregar Producto</button>
@@ -765,11 +830,200 @@ export default function AdminPanel() {
                 </div>
             )}
 
+            {/* --- VISTA: CLIENTES (NUEVA) --- */}
+            {activeTab === 'clients' && (
+                <div className="animate-in fade-in zoom-in duration-300">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                        <div>
+                            <h2 className={`${cinzel.className} text-xl md:text-2xl text-[#0a0a0a]`}>Base de Clientes</h2>
+                            <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest">{clients.length} usuarios registrados</p>
+                        </div>
+                        
+                        <button 
+                            onClick={() => { setMarketingModal(true); setSelectedClients([]); }} 
+                            className="bg-[#D4AF37] text-white px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg hover:bg-[#b5952f] transition-colors flex items-center gap-2 w-full md:w-auto justify-center"
+                        >
+                            <Gift size={18} /> Crear Campaña
+                        </button>
+                    </div>
+
+                    {/* Buscador */}
+                    <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm flex items-center gap-2 mb-6 max-w-md">
+                        <Search size={18} className="text-gray-400 ml-2" />
+                        <input 
+                            placeholder="Buscar por nombre o email..." 
+                            className="flex-1 p-2 outline-none text-sm text-gray-600"
+                            value={clientSearch}
+                            onChange={(e) => setClientSearch(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Grid Clientes */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {clients
+                            .filter(c => c.Nombre?.toLowerCase().includes(clientSearch.toLowerCase()) || c.Email?.toLowerCase().includes(clientSearch.toLowerCase()))
+                            .map((client, i) => (
+                            <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow group relative">
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="w-12 h-12 rounded-full bg-[#0a0a0a] text-[#D4AF37] flex items-center justify-center font-bold text-lg shadow-md border-2 border-[#D4AF37]">
+                                        {client.Nombre?.charAt(0) || 'C'}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-bold text-sm text-gray-800 truncate">{client.Nombre || "Cliente Sin Nombre"}</h4>
+                                        <p className="text-xs text-gray-400 truncate">{client.Email}</p>
+                                        <span className="text-[9px] bg-green-50 text-green-600 px-2 py-0.5 rounded mt-1 inline-block border border-green-100">Activo</span>
+                                    </div>
+                                </div>
+                                <div className="border-t border-gray-50 pt-3 flex gap-2">
+                                    <button 
+                                        onClick={() => { setSelectedClients([client.Email]); setMarketingModal(true); }}
+                                        className="flex-1 bg-gray-50 text-black py-2 rounded-lg text-[10px] font-bold uppercase tracking-wide hover:bg-[#D4AF37] hover:text-white transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Gift size={14} /> Enviar Regalo
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                        {clients.length === 0 && <div className="col-span-full text-center py-12 text-gray-400 bg-white rounded-2xl border border-dashed">No hay clientes registrados aún.</div>}
+                    </div>
+                </div>
+            )}
+
         </div>
       </main>
 
-      {/* --- MODALES UNIVERSALES --- */}
+      {/* --- MODALES --- */}
       <AnimatePresence>
+        
+        {/* MODAL DE MARKETING (NUEVO) */}
+        {marketingModal && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 md:p-4">
+                <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className="bg-white w-full max-w-4xl h-[90vh] rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl relative">
+                    <button onClick={() => setMarketingModal(false)} className="absolute top-4 right-4 z-20 bg-black/10 p-2 rounded-full hover:bg-black/20"><X size={20}/></button>
+                    
+                    {/* COLUMNA IZQUIERDA: CONFIGURACIÓN */}
+                    <div className="w-full md:w-1/3 bg-gray-50 p-6 overflow-y-auto border-r border-gray-200">
+                        <h3 className={`${cinzel.className} text-xl font-bold mb-6 text-[#0a0a0a]`}>Diseñar Campaña</h3>
+                        
+                        <div className="space-y-5">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Tipo</label>
+                                <div className="flex gap-2">
+                                    {['discount', 'gift', 'giftcard'].map(type => (
+                                        <button 
+                                            key={type}
+                                            onClick={() => setCouponConfig({...couponConfig, type})}
+                                            className={`flex-1 py-2 text-[10px] uppercase font-bold rounded-lg border ${couponConfig.type === type ? 'bg-[#0a0a0a] text-white border-black' : 'bg-white text-gray-500 border-gray-200'}`}
+                                        >
+                                            {type === 'discount' ? 'Desc.' : type === 'gift' ? 'Regalo' : 'Card'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Título</label><input className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm" value={couponConfig.title} onChange={e => setCouponConfig({...couponConfig, title: e.target.value})} /></div>
+                            
+                            <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Valor (ej: 20%, 50€)</label><input className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm" value={couponConfig.value} onChange={e => setCouponConfig({...couponConfig, value: e.target.value})} /></div>
+                            
+                            <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Código (Opcional)</label><input className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm font-mono tracking-widest uppercase" value={couponConfig.code} onChange={e => setCouponConfig({...couponConfig, code: e.target.value})} /></div>
+
+                            <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Mensaje</label><textarea className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm h-20" value={couponConfig.message} onChange={e => setCouponConfig({...couponConfig, message: e.target.value})} /></div>
+
+                            <div className="flex gap-4">
+                                <div className="flex-1 space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Fondo</label><input type="color" className="w-full h-10 rounded-lg cursor-pointer" value={couponConfig.bgColor} onChange={e => setCouponConfig({...couponConfig, bgColor: e.target.value})} /></div>
+                                <div className="flex-1 space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Texto</label><input type="color" className="w-full h-10 rounded-lg cursor-pointer" value={couponConfig.textColor} onChange={e => setCouponConfig({...couponConfig, textColor: e.target.value})} /></div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Imagen (Opcional)</label>
+                                <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:bg-gray-100 transition-colors">
+                                    <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                    <ImageIcon size={20} className="mx-auto text-gray-400 mb-1" />
+                                    <p className="text-[10px] text-gray-500">Click para subir</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* COLUMNA DERECHA: PREVISUALIZACIÓN Y LISTA */}
+                    <div className="w-full md:w-2/3 flex flex-col h-full">
+                        
+                        {/* 1. PREVISUALIZACIÓN */}
+                        <div className="flex-1 bg-[#e5e5e5] p-8 flex items-center justify-center relative overflow-hidden">
+                            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                            
+                            <div 
+                                className="relative w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center transition-all duration-300 overflow-hidden"
+                                style={{ backgroundColor: couponConfig.bgColor, color: couponConfig.textColor }}
+                            >
+                                {couponConfig.customImage && <img src={couponConfig.customImage} className="absolute inset-0 w-full h-full object-cover opacity-30" />}
+                                
+                                <div className="relative z-10">
+                                    <p className="text-xs uppercase tracking-[0.3em] opacity-80 mb-4">Bronzer Exclusive</p>
+                                    <h2 className={`${cinzel.className} text-3xl font-bold mb-2`}>{couponConfig.title}</h2>
+                                    <div className="my-6 border-y border-current py-4 opacity-90">
+                                        <p className="text-5xl font-bold">{couponConfig.value}</p>
+                                        <p className="text-xs uppercase tracking-widest mt-1">{couponConfig.type === 'discount' ? 'Descuento' : 'Regalo'}</p>
+                                    </div>
+                                    <p className="text-sm font-light italic mb-6">"{couponConfig.message}"</p>
+                                    <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg border border-white/30 inline-block px-6">
+                                        <p className="text-xs font-mono font-bold tracking-widest">{couponConfig.code}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 2. SELECCIÓN DE USUARIOS */}
+                        <div className="h-1/3 bg-white border-t border-gray-200 flex flex-col">
+                            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-white border border-gray-200 flex items-center rounded-lg px-2 py-1.5 w-40 md:w-60">
+                                        <Search size={14} className="text-gray-400 mr-2"/>
+                                        <input className="text-xs outline-none w-full" placeholder="Filtrar..." value={clientSearch} onChange={e => setClientSearch(e.target.value)} />
+                                    </div>
+                                    <button onClick={handleSelectAll} className="text-xs font-bold underline text-gray-500 hover:text-black">
+                                        {selectedClients.length > 0 ? 'Deseleccionar' : 'Todos'}
+                                    </button>
+                                </div>
+                                <span className="text-xs font-bold text-[#D4AF37]">{selectedClients.length} sel.</span>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-2">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    {clients
+                                        .filter(c => c.Nombre?.toLowerCase().includes(clientSearch.toLowerCase()) || c.Email?.toLowerCase().includes(clientSearch.toLowerCase()))
+                                        .map((c, i) => (
+                                        <div 
+                                            key={i} 
+                                            onClick={() => handleSelectClient(c.Email)}
+                                            className={`p-3 rounded-xl border cursor-pointer flex items-center gap-3 transition-all ${selectedClients.includes(c.Email) ? 'bg-[#0a0a0a] border-black text-white' : 'bg-white border-gray-100 hover:bg-gray-50'}`}
+                                        >
+                                            {selectedClients.includes(c.Email) ? <CheckSquare size={16} className="text-[#D4AF37]"/> : <Square size={16} className="text-gray-300"/>}
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-bold truncate">{c.Nombre}</p>
+                                                <p className={`text-[9px] truncate ${selectedClients.includes(c.Email) ? 'text-gray-400' : 'text-gray-400'}`}>{c.Email}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-white">
+                                <button onClick={() => setMarketingModal(false)} className="px-6 py-3 rounded-xl text-xs font-bold uppercase text-gray-500 hover:bg-gray-100">Cancelar</button>
+                                <button 
+                                    onClick={sendCampaign}
+                                    disabled={isProcessing}
+                                    className="bg-[#D4AF37] text-white px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg hover:bg-[#b5952f] transition-all flex items-center gap-2"
+                                >
+                                    {isProcessing ? <Loader2 size={16} className="animate-spin"/> : <Send size={16}/>} Enviar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+            </motion.div>
+        )}
+
         {(editBooking || productModal || serviceModal || editSpecialist) && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4">
                 <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="bg-white w-full md:w-[500px] max-h-[85vh] rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col shadow-2xl">
@@ -809,20 +1063,15 @@ export default function AdminPanel() {
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Categoría</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={serviceModal.category} onChange={e => setServiceModal({...serviceModal, category: e.target.value})} /></div>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Descripción</label><textarea className="w-full p-3 bg-gray-50 rounded-xl h-24 outline-none" value={serviceModal.description} onChange={e => setServiceModal({...serviceModal, description: e.target.value})} /></div>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Link Imagen</label><input className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" value={serviceModal.img} onChange={e => setServiceModal({...serviceModal, img: e.target.value})} /></div>
-
-                                {/* --- MODIFICACIÓN: SELECTOR DE ESPECIALISTAS PARA EL SERVICIO --- */}
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-gray-400 uppercase">Especialistas que realizan este servicio</label>
                                     <div className="flex gap-2">
-                                        {/* Input donde se ven los nombres agregados */}
                                         <input 
                                             className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" 
                                             placeholder="Nombres de especialistas..." 
                                             value={serviceModal.specialists || ''} 
                                             onChange={(e) => setServiceModal({...serviceModal, specialists: e.target.value})} 
                                         />
-                                        
-                                        {/* Selector para agregar rápido */}
                                         <select 
                                             className="p-3 bg-gray-100 rounded-xl text-xs outline-none w-1/3"
                                             onChange={(e) => {
@@ -842,8 +1091,6 @@ export default function AdminPanel() {
                                     </div>
                                     <p className="text-[9px] text-gray-400 mt-1">Selecciona de la lista para añadir. (Ej: Dra. Elena, Lic. Sofia)</p>
                                 </div>
-                                {/* ---------------------------------------------------- */}
-
                                 <button onClick={saveService} disabled={isProcessing} className="w-full bg-black text-white py-4 rounded-xl uppercase tracking-widest font-bold text-xs mt-4">Guardar</button>
                             </>
                         )}
@@ -862,7 +1109,6 @@ export default function AdminPanel() {
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editSpecialist.name} onChange={e => setEditSpecialist({...editSpecialist, name: e.target.value})} /></div>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Rol</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editSpecialist.role} onChange={e => setEditSpecialist({...editSpecialist, role: e.target.value})} /></div>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Horario</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editSpecialist.schedule} onChange={e => setEditSpecialist({...editSpecialist, schedule: e.target.value})} /></div>
-                                {/* --- NUEVO CAMPO PARA SERVICIOS (TEXTAREA) --- */}
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-gray-400 uppercase">Tratamientos (Separar por comas)</label>
                                     <textarea 

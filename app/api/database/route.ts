@@ -15,14 +15,15 @@ const getSheetsParams = (tab?: string | null) => {
   
   const sheets = google.sheets({ version: 'v4', auth });
   
-  // SI ES LA PESTAÑA DE CLIENTES, USAMOS EL ID ESPECÍFICO QUE ME DISTE
+  // SI ES LA PESTAÑA DE CLIENTES O CUPONES, USAMOS EL ID ESPECÍFICO
   // SI NO, USAMOS EL ID GENERAL DE SIEMPRE
-  const spreadsheetId = (tab === 'Clientes Registrados') 
+  const spreadsheetId = (tab === 'Clientes Registrados' || tab === 'cupones') 
     ? '1HaqEU4SnWdEDldvZTs0-hQUE6SBL2e7Zsy7X7dXOZ0Q' 
     : process.env.GOOGLE_SHEET_ID;
 
   return { sheets, spreadsheetId };
 };
+
 // --- LEER (GET) ---
 export async function GET(request: Request) {
   try {
@@ -37,14 +38,14 @@ export async function GET(request: Request) {
     // IMPORTANTE: Ponemos comillas simples '' al nombre del tab por si tiene espacios
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `'${tab}'!A2:H100`, 
+      range: `'${tab}'!A2:I100`, // Aumenté el rango hasta la columna I para cubrir todos los campos de cupones
     });
 
     const rows = response.data.values || [];
     
     const data = rows.map((row, i) => {
 
-        if (!row || !row[1]) return null;
+        if (!row || (!row[0] && !row[1])) return null; // Validación básica
 
         const baseObj = { rowIndex: i + 2 }; 
 
@@ -83,7 +84,7 @@ export async function GET(request: Request) {
           return { ...baseObj, date: row[0], client: row[1], total: row[2], details: row[3] };
         }
 
-         // --- CLIENTES REGISTRADOS (NUEVO) ---
+         // --- CLIENTES REGISTRADOS ---
         // Columnas Actualizadas: A=Fecha, B=Email, C=Password, D=Nombre
         if (tab === 'Clientes Registrados') {
            return {
@@ -95,6 +96,22 @@ export async function GET(request: Request) {
            };
         }
 
+        // --- CUPONES (NUEVO) ---
+        // Estructura: Email, Titulo, Tipo, Valor, Target, BgColor, Text, Color, Imagen
+        if (tab === 'cupones') {
+            return {
+              ...baseObj,
+              Email: row[0],    // Columna A
+              Titulo: row[1],   // Columna B
+              Tipo: row[2],     // Columna C
+              Valor: row[3],    // Columna D
+              Target: row[4],   // Columna E (Individual/Masivo)
+              BgColor: row[5],  // Columna F
+              Text: row[6],     // Columna G (Mensaje)
+              Color: row[7],    // Columna H (Color Texto)
+              Imagen: row[8]    // Columna I
+            };
+         }
 
         return null;
     }).filter(item => item !== null);
@@ -117,7 +134,8 @@ export async function PUT(request: Request) {
     // Definimos hasta qué columna escribir según la pestaña
     let endCol = 'H'; 
     if (tab === 'Productos' || tab === 'Servicios') endCol = 'G';
-    if (tab === 'Clientes Registrados') endCol = 'C'; // Solo usa A, B, C
+    if (tab === 'Clientes Registrados') endCol = 'D'; // Se usa hasta D
+    if (tab === 'cupones') endCol = 'I'; // Se usa hasta I
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
