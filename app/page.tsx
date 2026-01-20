@@ -133,24 +133,39 @@ const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
 };
 
 // --- COMPONENTE CARRITO CON CHECKOUT ---
+// --- COMPONENTE CARRITO ---
 const CartDrawer: React.FC<{
   onClose: () => void;
   cart: Array<{ id?: number; name: string; price: number; img?: string | null }>;
   removeFromCart: (index: number) => void;
   total: number;
   onCheckout: (order: any) => Promise<void>; 
-}> = ({ onClose, cart, removeFromCart, total, onCheckout }) => {
+  appliedCoupon?: any; // <--- SOLUCIÓN ERROR 1 y 3
+}> = ({ onClose, cart, removeFromCart, total, onCheckout, appliedCoupon }) => {
   const [view, setView] = useState('cart'); 
   const [paymentMethod, setPaymentMethod] = useState('pago_movil');
   const [paymentRef, setPaymentRef] = useState('');
   const [clientInfo, setClientInfo] = useState({ name: '', phone: '' });
+
+  // LÓGICA DE DESCUENTO (CARRITO)
+  let discountAmount = 0;
+  let finalTotal = total;
+
+  if (appliedCoupon && (appliedCoupon.Target === 'all' || appliedCoupon.Target === 'product')) {
+      if (String(appliedCoupon.Valor).includes('%')) {
+          const percent = parseInt(appliedCoupon.Valor.replace('%', ''));
+          discountAmount = (total * percent) / 100;
+      } else {
+          discountAmount = parseFloat(String(appliedCoupon.Valor).replace(/[^0-9.]/g, ''));
+      }
+      finalTotal = Math.max(0, total - discountAmount);
+  }
 
   return (
     <>
       <div onClick={onClose} className="fixed inset-0 z-[60] bg-[#191919]/20 backdrop-blur-[2px]"></div>
       <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed top-0 right-0 z-[70] h-screen w-full md:w-[450px] bg-[#E9E0D5]/95 backdrop-blur-xl shadow-2xl flex flex-col border-l border-white/50">
         
-        {/* Header del Carrito */}
         <div className="flex justify-between items-center p-6 border-b border-[#96765A]/20">
           <h3 className={`${cinzel.className} text-xl flex items-center gap-2 text-[#191919]`}>
              {view === 'checkout' && <button onClick={() => setView('cart')} className="mr-2"><ArrowLeft size={18}/></button>}
@@ -159,7 +174,6 @@ const CartDrawer: React.FC<{
           <button onClick={onClose} className="hover:text-[#96765A] p-2 text-[#191919]"><X size={24} /></button>
         </div>
 
-        {/* VISTA 1: LISTA DE PRODUCTOS */}
         {view === 'cart' && (
             <>
                 <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
@@ -185,14 +199,19 @@ const CartDrawer: React.FC<{
                 </div>
                 {cart.length > 0 && (
                     <div className="p-6 border-t border-[#96765A]/20 bg-[#E9E0D5]/50">
-                        <div className="flex justify-between mb-6 text-lg font-medium font-serif text-[#191919]"><span>Total</span><span>${Number(total).toFixed(2)}</span></div>
+                        {appliedCoupon && discountAmount > 0 && (
+                            <div className="mb-2 flex justify-between text-xs text-green-600 font-bold">
+                                <span>Cupón: {appliedCoupon.Titulo}</span>
+                                <span>-${Number(discountAmount).toFixed(2)}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between mb-6 text-lg font-medium font-serif text-[#191919]"><span>Total</span><span>${Number(finalTotal).toFixed(2)}</span></div>
                         <button onClick={() => setView('checkout')} className={`w-full py-4 text-xs uppercase tracking-[0.2em] ${GLASS_DARK_STYLE}`}>Ir a Pagar</button>
                     </div>
                 )}
             </>
         )}
 
-        {/* VISTA 2: PAGO (CHECKOUT) */}
         {view === 'checkout' && (
             <div className="flex-1 overflow-y-auto p-6 flex flex-col">
                 <div className="space-y-4 mb-6">
@@ -230,7 +249,8 @@ const CartDrawer: React.FC<{
                 <button 
                     onClick={() => {
                         if(!clientInfo.name || !paymentRef) return alert("Completa todos los datos");
-                        onCheckout({ cart, total, clientInfo, paymentMethod, paymentRef });
+                        // Pasamos el total YA DESCONTADO
+                        onCheckout({ cart, total: finalTotal, clientInfo, paymentMethod, paymentRef });
                     }} 
                     className={`w-full py-4 text-xs uppercase tracking-[0.2em] mt-6 ${GLASS_DARK_STYLE}`}
                 >
@@ -262,6 +282,8 @@ interface BookingModalProps {
   isSubmitting: boolean;
   saveToDatabase: (extraData: Record<string, unknown>) => void;
   specialistsList: Array<any>;
+  existingBookings: any[]; // <--- Agregado para evitar error de TS
+  appliedCoupon?: any;     // <--- Agregado para recibir el cupón
 }
 
 const BookingModal: React.FC<BookingModalProps> = ({
@@ -271,7 +293,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
   selectedDate, setSelectedDate,
   selectedTime, setSelectedTime,
   clientData, setClientData,
-  isSubmitting, saveToDatabase, specialistsList
+  isSubmitting, saveToDatabase, specialistsList,
+  existingBookings, // <--- Recibir props
+  appliedCoupon     // <--- Recibir props
 }) => {
 
   const [paymentMethod, setPaymentMethod] = useState('pago_movil'); 
@@ -289,6 +313,30 @@ const BookingModal: React.FC<BookingModalProps> = ({
         return serviceSpecs.includes(specName);
       })
     : specialistsList; 
+
+  // --- LÓGICA DE CÁLCULO DE PRECIO CON CUPÓN ---
+  const getFinalPrice = () => {
+      let price = Number(selectedService?.price) || 0;
+      
+      // Verificamos si hay cupón y si aplica (General o Específico al servicio actual)
+      if (appliedCoupon && (appliedCoupon.Target === 'all' || (appliedCoupon.Target === 'service' && (!appliedCoupon.selectedItem || appliedCoupon.selectedItem === selectedService?.name)))) {
+          
+          let discount = 0;
+          // Si es porcentaje (tiene %)
+          if (String(appliedCoupon.Valor).includes('%')) {
+              discount = (price * parseInt(appliedCoupon.Valor.replace('%', ''))) / 100;
+          } 
+          // Si es monto fijo
+          else {
+              discount = parseFloat(String(appliedCoupon.Valor).replace(/[^0-9.]/g, ''));
+          }
+          return Math.max(0, price - discount);
+      }
+      return price;
+  };
+
+  const finalPrice = getFinalPrice();
+  // ---------------------------------------------
 
   return (
   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-[#191919]/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -364,9 +412,33 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                   <p className="text-xs uppercase tracking-widest mb-3 text-[#191919]">Horas Disponibles</p>
                   <div className="grid grid-cols-3 gap-3">
-                    {['09:00', '11:00', '14:30', '16:00', '17:30'].map(time => (
-                      <button key={time} onClick={() => { setSelectedTime(time); setStep(3); }} className={`py-2 text-sm ${GLASS_STYLE.replace('py-3', '').replace('px-8','').replace('tracking-widest','')} hover:bg-white/20`}>{time}</button>
-                    ))}
+                    {['09:00', '11:00', '14:30', '16:00', '17:30'].map(time => {
+                      // Verificación de disponibilidad usando existingBookings
+                      const isBooked = existingBookings && existingBookings.some((booking: any) => 
+                        booking.specialist === selectedSpecialist?.name &&
+                        booking.date === selectedDate &&
+                        booking.time === time
+                      );
+
+                      return (
+                      <button 
+                        key={time} 
+                        onClick={() => { 
+                            if(!isBooked) {
+                                setSelectedTime(time); setStep(3); 
+                            }
+                        }} 
+                        disabled={isBooked}
+                        className={`py-2 text-sm transition-all ${
+                            isBooked 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' 
+                            : GLASS_STYLE.replace('py-3', '').replace('px-8','').replace('tracking-widest','') + ' hover:bg-white/20'
+                        }`}
+                      >
+                        {time}
+                        {isBooked && <span className="block text-[8px] mt-1">OCUPADO</span>}
+                      </button>
+                    )})}
                   </div>
                 </motion.div>
               )}
@@ -388,19 +460,36 @@ const BookingModal: React.FC<BookingModalProps> = ({
           </motion.div>
         )}
 
-        {/* PASO 4: CONFIRMACIÓN Y PAGO */}
+        {/* PASO 4: CONFIRMACIÓN Y PAGO (CON LOGICA DE DESCUENTO) */}
         {step === 4 && (
           <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-8">
             <button onClick={() => setStep(3)} className="text-xs text-gray-400 underline mb-2 self-start">Volver</button>
             <h2 className={`${cinzel.className} text-xl md:text-2xl mb-4 text-[#191919]`}>Finalizar Reserva</h2>
             
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                {/* Resumen */}
+                
+                {/* --- RESUMEN DE COMPRA --- */}
                 <div className="bg-white/40 p-4 rounded-xl border border-white/50 mb-6 text-sm">
                     <p className="font-bold text-base mb-2 text-[#191919]">{selectedService?.name || selectedService?.title}</p>
                     <div className="flex justify-between text-gray-500 mb-1"><span>Especialista:</span> <span className="text-[#191919]">{selectedSpecialist.name}</span></div>
                     <div className="flex justify-between text-gray-500 mb-1"><span>Fecha:</span> <span className="text-[#191919]">{selectedDate} - {selectedTime}</span></div>
-                    <div className="flex justify-between text-gray-500 border-t border-[#96765A]/20 pt-2 mt-2"><span>Total a Pagar:</span> <span className="text-[#96765A] font-bold">${selectedService?.price}</span></div>
+                    
+                    <div className="flex justify-between text-gray-500 border-t border-[#96765A]/20 pt-2 mt-2 items-center">
+                        <span>Total a Pagar:</span> 
+                        <div className="text-right">
+                            {/* SI HAY DESCUENTO, TACHAMOS EL PRECIO ORIGINAL */}
+                            {appliedCoupon && finalPrice < Number(selectedService.price) && (
+                                <span className="text-xs line-through text-gray-400 mr-2">${selectedService.price}</span>
+                            )}
+                            <span className="text-[#96765A] font-bold text-lg">${finalPrice}</span>
+                        </div>
+                    </div>
+                    {/* MENSAJE DE CUPÓN APLICADO */}
+                    {appliedCoupon && finalPrice < Number(selectedService.price) && (
+                        <p className="text-[10px] text-green-600 mt-1 text-right font-bold flex justify-end items-center gap-1">
+                            <Check size={10}/> Cupón aplicado: {appliedCoupon.Titulo}
+                        </p>
+                    )}
                 </div>
 
                 {/* Selección de Pago */}
@@ -460,7 +549,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
             <button 
                 onClick={() => {
-                    // Validar que ponga referencia si no es efectivo
                     if(paymentMethod !== 'efectivo' && !paymentRef) {
                         alert("Por favor ingresa el número de referencia del pago.");
                         return;
@@ -906,9 +994,12 @@ export default function BronzerFullPlatform() {
   const [isScrolled, setIsScrolled] = useState(false); 
   const [clientAuthOpen, setClientAuthOpen] = useState(false);
   const [clientNewsOpen, setClientNewsOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userCoupons, setUserCoupons] = useState<any[]>([]); // <--- AGREGAR ESTA LÍNEA
   
+  // --- ESTADO USUARIO Y CUPONES ---
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userCoupons, setUserCoupons] = useState<any[]>([]); 
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null); // Estado del cupón activo
+
   // --- ESTADOS: INICIALIZAMOS CON LOS DATOS DE DEMO ---
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [specialists, setSpecialists] = useState(INITIAL_SPECIALISTS);
@@ -930,6 +1021,9 @@ export default function BronzerFullPlatform() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [clientData, setClientData] = useState<{ name: string; phone: string; note: string }>({ name: "", phone: "", note: "" }); 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  
+  // Estado de citas existentes (para bloquear horarios)
+  const [existingBookings, setExistingBookings] = useState<any[]>([]);
 
   const carouselRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
@@ -940,10 +1034,25 @@ export default function BronzerFullPlatform() {
     }
   }, []);
 
+  // --- CARGA DE CITAS EXISTENTES ---
+  const fetchExistingBookings = async () => {
+    try {
+        const response = await fetch('/api/calendar', { method: 'POST', body: JSON.stringify({ action: "getBookings" }) });
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data) {
+                setExistingBookings(data.data);
+            }
+        }
+    } catch (error) { console.error("Error cargando citas existentes:", error); }
+  };
+
   useEffect(() => {
     // CARGA DE DATOS REALES (SI EXISTEN)
     const fetchData = async () => {
         try {
+            await fetchExistingBookings();
+
             const resProd = await fetch('/api/database?tab=Productos');
             const dataProd = await resProd.json();
             if(dataProd.success && dataProd.data.length > 0) setProducts(dataProd.data);
@@ -975,7 +1084,6 @@ export default function BronzerFullPlatform() {
           
           if(data.success) {
               // 2. Filtramos: El email del cupón debe coincidir con el email del usuario logueado
-              // Usamos .trim() y .toLowerCase() para evitar errores por mayúsculas/espacios
               const myCoupons = data.data.filter((c: any) => 
                   c.Email?.toLowerCase().trim() === user.Email?.toLowerCase().trim()
               );
@@ -988,12 +1096,26 @@ export default function BronzerFullPlatform() {
       setClientNewsOpen(true); // Abrir el modal
   };
 
+  // --- LÓGICA DE CANJE DE CUPONES ---
+  const handleRedeemCoupon = (coupon: any) => {
+      setAppliedCoupon(coupon);
+      setClientNewsOpen(false); // Cerrar modal de noticias
+      
+      if (coupon.Target === 'product' || coupon.Target === 'all' || !coupon.Target) {
+          alert(`✅ Cupón "${coupon.Titulo}" activado. Se aplicará en tu carrito de compras.`);
+          setCartOpen(true); 
+      } else if (coupon.Target === 'service') {
+          alert(`✅ Cupón "${coupon.Titulo}" activado. Se aplicará al agendar tu cita.`);
+          // Opcional: setBookingOpen(true);
+      }
+  };
+
   // --- FUNCIÓN CORREGIDA: GUARDAR CITAS EN PESTAÑA 'Citas' ---
   const saveToDatabase = async (extraData: Record<string, unknown>): Promise<void> => {
     setIsSubmitting(true);
     try {
       const payload = {
-          sheetName: "Citas", // <--- Pestaña exacta en tu Excel
+          sheetName: "Citas", 
           name: clientData.name,
           phone: clientData.phone,
           note: clientData.note,
@@ -1001,6 +1123,7 @@ export default function BronzerFullPlatform() {
           date: selectedDate, 
           time: selectedTime, 
           specialist: selectedSpecialist?.name,
+          couponUsed: appliedCoupon ? appliedCoupon.Titulo : '', // Guardar si se usó cupón
           ...extraData 
       };
 
@@ -1012,7 +1135,11 @@ export default function BronzerFullPlatform() {
       
       if (!response.ok) throw new Error("Error server");
       const data = await response.json();
-      if (data.success) setBookingStep(5); else alert("Error al agendar");
+      if (data.success) {
+          await fetchExistingBookings(); // Recargar citas ocupadas
+          setBookingStep(5); 
+          setAppliedCoupon(null); // Limpiar cupón tras uso
+      } else alert("Error al agendar");
     } catch (error) { alert("Fallo conexión"); } 
     finally { setIsSubmitting(false); }
   };
@@ -1026,9 +1153,10 @@ export default function BronzerFullPlatform() {
               cliente: orderData.clientInfo.name,
               telefono: orderData.clientInfo.phone,
               productos: orderData.cart.map((p: any) => p.name).join(", "),
-              total: orderData.total,
+              total: orderData.total, // Este total ya viene con descuento desde CartDrawer
               metodoPago: orderData.paymentMethod,
-              referencia: orderData.paymentRef
+              referencia: orderData.paymentRef,
+              cupon: appliedCoupon ? appliedCoupon.Titulo : '' // Guardar cupón en ventas
           };
 
           const response = await fetch('/api/calendar', { 
@@ -1041,6 +1169,7 @@ export default function BronzerFullPlatform() {
               alert(`¡Gracias ${orderData.clientInfo.name}! Tu pedido ha sido registrado correctamente.`);
               setCart([]); 
               setCartOpen(false);
+              setAppliedCoupon(null); // Limpiar cupón
           } else {
               alert("Hubo un error al guardar el pedido. Intenta nuevamente.");
           }
@@ -1097,8 +1226,8 @@ export default function BronzerFullPlatform() {
                     })}
                 </div>
             </main>
-            {/* AQUÍ AGREGAMOS LA PROPIEDAD onCheckout */}
-            {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} />}
+            {/* AQUÍ AGREGAMOS LA PROPIEDAD onCheckout y appliedCoupon */}
+            {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} appliedCoupon={appliedCoupon} />}
         </div>
       );
   }
@@ -1111,11 +1240,10 @@ export default function BronzerFullPlatform() {
         {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
       </AnimatePresence>
       
-      {/* HEADER CORREGIDO: ALTURA Y MÁRGENES MÓVILES */}
+      {/* HEADER CORREGIDO */}
       <header className={`fixed top-0 w-full z-50 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] border-b ${isScrolled ? 'bg-[#E9E0D5]/90 backdrop-blur-xl border-[#96765A]/10 h-16 md:h-20 shadow-sm' : 'bg-transparent border-transparent h-20 md:h-32'}`}>
         <div className="container mx-auto h-full flex items-center justify-between relative">
           
-          {/* 1. LOGO: 'left-8' para móvil, 'left-12' para PC */}
           <div className={`absolute top-1/2 -translate-y-1/2 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] z-20 ${isScrolled ? 'left-1/2 -translate-x-1/2' : 'left-8 md:left-12'}`}>
              <div className={`${cinzel.className} text-xl md:text-2xl tracking-[0.15em] font-semibold flex items-center gap-2 text-[#191919]`}>
                BRONZER 
@@ -1123,14 +1251,12 @@ export default function BronzerFullPlatform() {
              </div>
           </div>
 
-          {/* 2. MENÚ: SE OCULTA AL BAJAR */}
           <nav className={`hidden md:flex mx-auto gap-8 text-xs tracking-[0.2em] uppercase font-medium text-gray-500 transition-all duration-500 delay-100 ${isScrolled ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
             {['Experiencia', 'Servicios', 'Boutique', 'Contacto'].map(item => (
               <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-black transition-colors">{item}</a>
             ))}
           </nav>
 
-          {/* 3. ICONOS Y BOTÓN: 'right-8' para móvil */}
           <div className="absolute right-8 md:right-12 top-1/2 -translate-y-1/2 flex items-center gap-4 md:gap-6 z-20">
             {/* --- BOTÓN DE ACCESO CLIENTE --- */}
             <button 
@@ -1138,14 +1264,16 @@ export default function BronzerFullPlatform() {
                 className="relative cursor-pointer hover:text-[#96765A] transition-colors mr-4"
             >
                 {currentUser ? (
-                    <div className="w-6 h-6 bg-[#96765A] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                    <div className="w-6 h-6 bg-[#96765A] rounded-full flex items-center justify-center text-white text-xs font-bold relative">
                         {currentUser.Nombre?.charAt(0)}
+                        {/* Indicador de cupones */}
+                        {userCoupons.length > 0 && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-[#E9E0D5]"></span>}
                     </div>
                 ) : (
                     <User size={20} strokeWidth={1.5} />
                 )}
             </button>
-            {/* ------------------------------- */}
+            
             <div className="relative cursor-pointer hover:text-[#96765A] transition-colors" onClick={() => setCartOpen(true)}>
               <ShoppingBag size={20} strokeWidth={1.5} />
               {cart.length > 0 && <span className="absolute -top-2 -right-2 bg-[#191919] text-[#E9E0D5] text-[10px] w-4 h-4 flex items-center justify-center rounded-full shadow-sm">{cart.length}</span>}
@@ -1158,46 +1286,26 @@ export default function BronzerFullPlatform() {
                 Agendar
             </button>
           </div>
-          
         </div>
       </header>
 
-      {/* HERO SECTION CON VIDEO DE FONDO (FULL SCREEN) */}
+      {/* HERO SECTION */}
       <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
-        
-        {/* 1. VIDEO DE FONDO (OCUPA TODO EL ESPACIO) */}
         <div className="absolute inset-0 z-0">
-          <video 
-            className="w-full h-full object-cover" 
-            autoPlay 
-            loop 
-            muted 
-            playsInline 
-          >
+          <video className="w-full h-full object-cover" autoPlay loop muted playsInline >
             <source src="/portada.mp4" type="video/mp4" />
           </video>
-          {/* Capas de superposición para legibilidad del texto */}
           <div className="absolute inset-0 bg-white/20"></div>
-          {/* Gradiente: Sólido a la izquierda (texto), transparente a la derecha (video) */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#FAF9F6] via-[#FAF9F6]/10 to-transparent"></div>
         </div>
 
-        {/* 2. CONTENIDO (SOBRE EL VIDEO) */}
         <div className="container mx-auto px-6 md:px-12 relative z-10 w-full h-full flex flex-col justify-center">
           <div className="w-full md:w-1/2">
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ duration: 0.8, delay: showSplash ? 3.8 : 0.2}} 
-            >
+            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: showSplash ? 3.8 : 0.2}} >
               <span className="text-[#96765A] text-xs tracking-[0.4em] uppercase font-bold mb-4 block">Medical Aesthetic</span>
-              <h1 className={`${cinzel.className} text-4xl md:text-5xl lg:text-7xl leading-[1.1] mb-6 text-[#191919] drop-shadow-sm`}>Centro <br/> Estético y <span className="italic text-[#6D6D6D] font-serif">Spa.</span></h1>
+              <h1 className={`${cinzel.className} text-4xl md:text-5xl lg:text-7xl leading-[1.1] mb-6 text-[#191919] drop-shadow-sm`}>Centro <br/> Estético y <br/><span className="italic text-[#6D6D6D] font-serif">Spa.</span></h1>
               <p className="text-[#191919] font-medium leading-relaxed max-w-md mb-8 md:mb-10 text-sm md:text-base">Elevamos el estándar de la belleza. Tecnología de vanguardia en un ambiente de calma absoluta.</p>
-              
-              <button 
-                  onClick={() => { setSelectedService(null); setBookingStep(1); setBookingOpen(true); }} 
-                  className={`flex w-fit items-center gap-4 px-6 md:px-8 py-3 md:py-4 text-xs uppercase tracking-widest ${GLASS_STYLE} bg-white/80 hover:bg-[#96765A] hover:text-white transition-all`}
-              >
+              <button onClick={() => { setSelectedService(null); setBookingStep(1); setBookingOpen(true); }} className={`flex w-fit items-center gap-4 px-6 md:px-8 py-3 md:py-4 text-xs uppercase tracking-widest ${GLASS_STYLE} bg-white/80 hover:bg-[#96765A] hover:text-white transition-all`}>
                   Reservar Cita <ArrowRight size={14} />
               </button>
             </motion.div>
@@ -1207,13 +1315,9 @@ export default function BronzerFullPlatform() {
 
       <section id="experiencia" className="py-16 md:py-24 px-6 md:px-24 bg-white/50 relative">
         <div className="max-w-4xl mx-auto text-center mb-12 md:mb-16 relative z-10">
-          {/* BLOQUE DE 5 ESTRELLAS */}
           <div className="flex justify-center gap-1 mb-6">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-6 h-6 text-[#96765A] drop-shadow-sm" fill="#96765A" />
-            ))}
+            {[...Array(5)].map((_, i) => ( <Star key={i} className="w-6 h-6 text-[#96765A] drop-shadow-sm" fill="#96765A" /> ))}
           </div>
-          
           <h2 className={`${cinzel.className} text-2xl md:text-3xl lg:text-4xl mb-6 text-[#191919]`}>The Bronzer Standard</h2>
           <p className="text-gray-600 font-light leading-7 md:leading-8 text-sm md:text-base">"No creemos en la transformación forzada, sino en la revelación de tu mejor versión. Utilizamos protocolos suizos y aparatología alemana para garantizar resultados visibles."</p>
         </div>
@@ -1229,12 +1333,10 @@ export default function BronzerFullPlatform() {
         <div className="container mx-auto px-6 md:px-12 relative z-10">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4 relative z-10">
             <h2 className={`${cinzel.className} text-2xl md:text-4xl drop-shadow-sm text-[#191919]`}>Menú de Tratamientos</h2>
-            {/* BOTÓN ELIMINADO */}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             {services.map((item: Service) => {
-              // BUSCA LA IMAGEN EN CUALQUIERA DE ESTOS NOMBRES
-const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item.Image);
+              const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item.Image);
               return (
               <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="bg-white/40 backdrop-blur-md p-4 rounded-3xl group cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(150,118,90,0.1)] transition-all duration-500 border border-white/50">
                 <div className="relative h-48 md:h-64 mb-6 overflow-hidden bg-[#E9E0D5] rounded-2xl">
@@ -1247,22 +1349,18 @@ const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item
               </motion.div>
             )})}
           </div>
-          {/* BOTÓN MÓVIL AL FINAL (SOLO VISIBLE EN MÓVIL) */}
           <div className="flex md:hidden justify-center mt-8">
             <button className={`flex items-center gap-2 px-8 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}>Ver Todo <ArrowRight size={14} /></button>
           </div>
         </div>
       </section>
 
-      {/* --- SECCIÓN BOUTIQUE 3D CAROUSEL (ESTILO NIKE) --- */}
       <section id="boutique" className="relative bg-[#FAF9F6] overflow-hidden min-h-[700px] flex items-center">
-        
         <Boutique3DCarousel 
-            products={products.slice(0, 3)} // <--- ESTO LIMITA A SOLO 3 PRODUCTOS
+            products={products.slice(0, 3)} 
             addToCart={addToCart} 
-            onViewAll={() => { setShowFullShop(true); window.scrollTo(0,0); }} // <--- ESTO ABRE LA TIENDA
+            onViewAll={() => { setShowFullShop(true); window.scrollTo(0,0); }} 
         />
-
       </section>
 
       <section className="relative h-[50vh] md:h-[80vh] w-full">
@@ -1285,11 +1383,9 @@ const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item
         <div className="container mx-auto px-6 border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest text-gray-500 relative z-10">
             <p>© 2025 BRONZER AESTHETIC. ALL RIGHTS RESERVED.</p>
             <div className="flex gap-6 mt-4 md:mt-0">
-
                 <a href="https://www.instagram.com/bronzerdeluxe/" target="_blank" rel="noopener noreferrer">
                     <Instagram className="cursor-pointer hover:text-[#96765A] transition-colors" size={18} />
                 </a>
-
                 <Mail className="cursor-pointer hover:text-[#96765A] transition-colors" size={18} />
             </div>
         </div>
@@ -1297,8 +1393,11 @@ const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item
       </footer>
 
       <AnimatePresence>
-        {bookingOpen && <BookingModal key="modal" onClose={() => setBookingOpen(false)} step={bookingStep} setStep={setBookingStep} selectedSpecialist={selectedSpecialist} setSelectedSpecialist={setSelectedSpecialist} selectedService={selectedService} setSelectedService={setSelectedService} selectedDate={selectedDate} setSelectedDate={setSelectedDate} selectedTime={selectedTime} setSelectedTime={setSelectedTime} clientData={clientData} setClientData={setClientData} isSubmitting={isSubmitting} saveToDatabase={saveToDatabase} specialistsList={specialists} />}
-        {cartOpen && <CartDrawer key="drawer" onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} />}
+        {/* MODAL RESERVA: Se le pasa el cupón aplicado */}
+        {bookingOpen && <BookingModal key="modal" onClose={() => setBookingOpen(false)} step={bookingStep} setStep={setBookingStep} selectedSpecialist={selectedSpecialist} setSelectedSpecialist={setSelectedSpecialist} selectedService={selectedService} setSelectedService={setSelectedService} selectedDate={selectedDate} setSelectedDate={setSelectedDate} selectedTime={selectedTime} setSelectedTime={setSelectedTime} clientData={clientData} setClientData={setClientData} isSubmitting={isSubmitting} saveToDatabase={saveToDatabase} specialistsList={specialists} existingBookings={existingBookings} appliedCoupon={appliedCoupon} />}
+        
+        {/* CARRITO: Se le pasa el cupón aplicado */}
+        {cartOpen && <CartDrawer key="drawer" onClose={() => setCartOpen(false)} cart={cart} removeFromCart={removeFromCart} total={cartTotal} onCheckout={handleCheckout} appliedCoupon={appliedCoupon} />}
       </AnimatePresence>
 
       {/* MODALES DE CLIENTE */}
@@ -1314,11 +1413,11 @@ const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item
                 user={currentUser} 
                 coupons={userCoupons} 
                 onClose={() => setClientNewsOpen(false)} 
-                // AGREGADO: Lógica para cerrar sesión
                 onLogout={() => {
                     setCurrentUser(null);
                     setClientNewsOpen(false);
                 }}
+                onRedeem={handleRedeemCoupon} // Pasamos la función de canje
             />
         )}
       </AnimatePresence>

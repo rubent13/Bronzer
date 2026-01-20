@@ -468,31 +468,43 @@ export default function AdminPanel() {
   };
 
   // --- ACTUALIZACIÓN: LÓGICA REAL DE ENVÍO (GOOGLE SHEETS) ---
-  const sendCampaign = async () => {
-      // 1. Validaciones
+const sendCampaign = async () => {
       if (selectedClients.length === 0) return alert("Selecciona al menos un cliente.");
+      
+      // Validación: Si seleccionó servicio/producto pero no eligió cuál
+      if (couponConfig.scope !== 'all' && !couponConfig.selectedItem) {
+          return alert("Por favor selecciona el Servicio o Producto específico.");
+      }
       
       setIsProcessing(true);
 
       try {
-          // 2. Creamos una promesa de envío por cada cliente seleccionado
           const promises = selectedClients.map(async (email) => {
               
-              // Estructura exacta para tu Excel (Pestaña 'cupones'): 
-              // A:Email, B:Titulo, C:Tipo, D:Valor, E:Target, F:BgColor, G:Text, H:Color, I:Imagen
+              // 1. GENERAR CÓDIGO CSS DEL FONDO
+              const finalBg = couponConfig.isGradient 
+                  ? `linear-gradient(135deg, ${couponConfig.bgColor}, ${couponConfig.color2})`
+                  : couponConfig.bgColor;
+
+              // 2. AGREGAR LA RESTRICCIÓN AL MENSAJE (Para que el usuario lo lea)
+              let finalMessage = couponConfig.message;
+              if (couponConfig.selectedItem) {
+                  finalMessage += ` (Válido solo en: ${couponConfig.selectedItem})`;
+              }
+
+              // Estructura Sheet: Email, Titulo, Tipo, Valor, Target, BgColor, Text, Color, Imagen
               const rowData = [
-                  email,                      // A: Email del cliente
-                  couponConfig.title,         // B: Título
-                  couponConfig.type,          // C: Tipo (discount, gift...)
-                  couponConfig.value,         // D: Valor (20%, 50€...)
-                  selectedClients.length > 1 ? 'Masivo' : 'Individual', // E: Target
-                  couponConfig.bgColor,       // F: Fondo
-                  couponConfig.message,       // G: Mensaje
-                  couponConfig.textColor,     // H: Color Texto
-                  couponConfig.customImage || '' // I: Imagen (si hay)
+                  email,
+                  couponConfig.title,
+                  couponConfig.type,
+                  couponConfig.value,
+                  selectedClients.length > 1 ? 'Masivo' : 'Individual',
+                  finalBg,       // Guardamos el CSS aquí
+                  finalMessage,  // Guardamos el mensaje modificado aquí
+                  couponConfig.textColor,
+                  couponConfig.customImage || ''
               ];
 
-              // Llamada a la API para guardar en la pestaña 'cupones'
               await fetch('/api/database', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -503,17 +515,15 @@ export default function AdminPanel() {
               });
           });
 
-          // 3. Esperar a que se guarden todos los registros
           await Promise.all(promises);
 
-          // 4. Éxito
-          alert(`✅ ¡Campaña enviada y guardada con éxito para ${selectedClients.length} usuarios!`);
+          alert(`✅ ¡Campaña enviada con éxito a ${selectedClients.length} usuarios!`);
           setMarketingModal(false);
           setSelectedClients([]);
           
       } catch (error) {
           console.error(error);
-          alert("Hubo un error al guardar los cupones en la base de datos.");
+          alert("Hubo un error al guardar los cupones.");
       } finally {
           setIsProcessing(false);
       }
@@ -895,7 +905,7 @@ export default function AdminPanel() {
       {/* --- MODALES --- */}
       <AnimatePresence>
         
-        {/* MODAL DE MARKETING (NUEVO) */}
+{/* MODAL DE MARKETING */}
         {marketingModal && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 md:p-4">
                 <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className="bg-white w-full max-w-4xl h-[90vh] rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl relative">
@@ -921,6 +931,37 @@ export default function AdminPanel() {
                                 </div>
                             </div>
 
+                            {/* --- NUEVO: SELECTOR DE ALCANCE --- */}
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase">Aplicar a:</label>
+                                <select 
+                                    className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm outline-none"
+                                    value={couponConfig.scope}
+                                    onChange={(e) => setCouponConfig({ ...couponConfig, scope: e.target.value, selectedItem: '' })}
+                                >
+                                    <option value="all">Todo el sitio / General</option>
+                                    <option value="service">Servicio Específico</option>
+                                    <option value="product">Producto Específico</option>
+                                </select>
+                            </div>
+
+                            {couponConfig.scope !== 'all' && (
+                                <div className="space-y-1 animate-in fade-in zoom-in">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Seleccionar {couponConfig.scope === 'service' ? 'Servicio' : 'Producto'}</label>
+                                    <select 
+                                        className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm outline-none"
+                                        value={couponConfig.selectedItem}
+                                        onChange={(e) => setCouponConfig({ ...couponConfig, selectedItem: e.target.value })}
+                                    >
+                                        <option value="">-- Seleccionar --</option>
+                                        {couponConfig.scope === 'service' 
+                                            ? services.map(s => <option key={s.id} value={s.name}>{s.name}</option>)
+                                            : products.map(p => <option key={p.id} value={p.name}>{p.name}</option>)
+                                        }
+                                    </select>
+                                </div>
+                            )}
+
                             <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Título</label><input className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm" value={couponConfig.title} onChange={e => setCouponConfig({...couponConfig, title: e.target.value})} /></div>
                             
                             <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Valor (ej: 20%, 50€)</label><input className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm" value={couponConfig.value} onChange={e => setCouponConfig({...couponConfig, value: e.target.value})} /></div>
@@ -929,9 +970,38 @@ export default function AdminPanel() {
 
                             <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Mensaje</label><textarea className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm h-20" value={couponConfig.message} onChange={e => setCouponConfig({...couponConfig, message: e.target.value})} /></div>
 
-                            <div className="flex gap-4">
-                                <div className="flex-1 space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Fondo</label><input type="color" className="w-full h-10 rounded-lg cursor-pointer" value={couponConfig.bgColor} onChange={e => setCouponConfig({...couponConfig, bgColor: e.target.value})} /></div>
-                                <div className="flex-1 space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Texto</label><input type="color" className="w-full h-10 rounded-lg cursor-pointer" value={couponConfig.textColor} onChange={e => setCouponConfig({...couponConfig, textColor: e.target.value})} /></div>
+                            {/* --- NUEVO: COLORES CON DEGRADADO --- */}
+                            <div className="space-y-2 pt-2 border-t border-gray-100 mt-2">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Estilo de Fondo</label>
+                                    <label className="flex items-center gap-2 text-[10px] cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={couponConfig.isGradient} 
+                                            onChange={(e) => setCouponConfig({...couponConfig, isGradient: e.target.checked})}
+                                            className="accent-black"
+                                        />
+                                        Usar Degradado
+                                    </label>
+                                </div>
+                                <div className="flex gap-4">
+                                    <div className="flex-1 space-y-1">
+                                        <label className="text-[9px] text-gray-400 uppercase">Color 1</label>
+                                        <input type="color" className="w-full h-10 rounded-lg cursor-pointer border-0 p-0" value={couponConfig.bgColor} onChange={e => setCouponConfig({...couponConfig, bgColor: e.target.value})} />
+                                    </div>
+                                    
+                                    {couponConfig.isGradient && (
+                                        <div className="flex-1 space-y-1 animate-in fade-in slide-in-from-left-2">
+                                            <label className="text-[9px] text-gray-400 uppercase">Color 2</label>
+                                            <input type="color" className="w-full h-10 rounded-lg cursor-pointer border-0 p-0" value={couponConfig.color2} onChange={e => setCouponConfig({...couponConfig, color2: e.target.value})} />
+                                        </div>
+                                    )}
+
+                                    <div className="flex-1 space-y-1">
+                                        <label className="text-[9px] text-gray-400 uppercase">Texto</label>
+                                        <input type="color" className="w-full h-10 rounded-lg cursor-pointer border-0 p-0" value={couponConfig.textColor} onChange={e => setCouponConfig({...couponConfig, textColor: e.target.value})} />
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="space-y-1">
@@ -954,7 +1024,13 @@ export default function AdminPanel() {
                             
                             <div 
                                 className="relative w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center transition-all duration-300 overflow-hidden"
-                                style={{ backgroundColor: couponConfig.bgColor, color: couponConfig.textColor }}
+                                style={{ 
+                                    // APLICA EL DEGRADADO O EL COLOR SÓLIDO
+                                    background: couponConfig.isGradient 
+                                        ? `linear-gradient(135deg, ${couponConfig.bgColor}, ${couponConfig.color2})`
+                                        : couponConfig.bgColor, 
+                                    color: couponConfig.textColor 
+                                }}
                             >
                                 {couponConfig.customImage && <img src={couponConfig.customImage} className="absolute inset-0 w-full h-full object-cover opacity-30" />}
                                 
@@ -963,9 +1039,21 @@ export default function AdminPanel() {
                                     <h2 className={`${cinzel.className} text-3xl font-bold mb-2`}>{couponConfig.title}</h2>
                                     <div className="my-6 border-y border-current py-4 opacity-90">
                                         <p className="text-5xl font-bold">{couponConfig.value}</p>
-                                        <p className="text-xs uppercase tracking-widest mt-1">{couponConfig.type === 'discount' ? 'Descuento' : 'Regalo'}</p>
+                                        <p className="text-xs uppercase tracking-widest mt-1">
+                                            {couponConfig.type === 'discount' ? 'Descuento' : couponConfig.type === 'gift' ? 'Regalo' : 'Gift Card'}
+                                        </p>
                                     </div>
-                                    <p className="text-sm font-light italic mb-6">"{couponConfig.message}"</p>
+                                    <p className="text-sm font-light italic mb-2">"{couponConfig.message}"</p>
+                                    
+                                    {/* MUESTRA EL SERVICIO/PRODUCTO SI SE SELECCIONÓ */}
+                                    {couponConfig.selectedItem && (
+                                        <div className="mb-4">
+                                            <span className="text-[9px] uppercase font-bold tracking-widest border border-current/30 px-2 py-1 rounded inline-block">
+                                                Válido en: {couponConfig.selectedItem}
+                                            </span>
+                                        </div>
+                                    )}
+
                                     <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg border border-white/30 inline-block px-6">
                                         <p className="text-xs font-mono font-bold tracking-widest">{couponConfig.code}</p>
                                     </div>
