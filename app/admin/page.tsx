@@ -468,10 +468,11 @@ export default function AdminPanel() {
   };
 
   // --- ACTUALIZACIÓN: LÓGICA REAL DE ENVÍO (GOOGLE SHEETS) ---
-const sendCampaign = async () => {
+// --- EN ADMIN PANEL: ACTUALIZA ESTA FUNCIÓN ---
+  const sendCampaign = async () => {
       if (selectedClients.length === 0) return alert("Selecciona al menos un cliente.");
       
-      // Validación: Si seleccionó servicio/producto pero no eligió cuál
+      // Validación
       if (couponConfig.scope !== 'all' && !couponConfig.selectedItem) {
           return alert("Por favor selecciona el Servicio o Producto específico.");
       }
@@ -481,16 +482,20 @@ const sendCampaign = async () => {
       try {
           const promises = selectedClients.map(async (email) => {
               
-              // 1. GENERAR CÓDIGO CSS DEL FONDO
+              // 1. PREPARAR EL FONDO (Color sólido o Gradient)
               const finalBg = couponConfig.isGradient 
                   ? `linear-gradient(135deg, ${couponConfig.bgColor}, ${couponConfig.color2})`
                   : couponConfig.bgColor;
 
-              // 2. AGREGAR LA RESTRICCIÓN AL MENSAJE (Para que el usuario lo lea)
+              // 2. PREPARAR EL TARGET (Esto es lo vital para que funcione el descuento)
+              // Guardaremos un formato especial: "TIPO|NOMBRE" (ej: "service|Nutricion")
+              let targetValue = 'all';
+              if (couponConfig.scope === 'service') targetValue = `service|${couponConfig.selectedItem}`;
+              if (couponConfig.scope === 'product') targetValue = `product|${couponConfig.selectedItem}`;
+
+              // 3. PREPARAR MENSAJE VISUAL
               let finalMessage = couponConfig.message;
-              if (couponConfig.selectedItem) {
-                  finalMessage += ` (Válido solo en: ${couponConfig.selectedItem})`;
-              }
+              if (couponConfig.selectedItem) finalMessage += ` (Válido solo en: ${couponConfig.selectedItem})`;
 
               // Estructura Sheet: Email, Titulo, Tipo, Valor, Target, BgColor, Text, Color, Imagen
               const rowData = [
@@ -498,9 +503,9 @@ const sendCampaign = async () => {
                   couponConfig.title,
                   couponConfig.type,
                   couponConfig.value,
-                  selectedClients.length > 1 ? 'Masivo' : 'Individual',
-                  finalBg,       // Guardamos el CSS aquí
-                  finalMessage,  // Guardamos el mensaje modificado aquí
+                  targetValue,   // <--- AQUÍ GUARDAMOS LA LÓGICA
+                  finalBg,       
+                  finalMessage,
                   couponConfig.textColor,
                   couponConfig.customImage || ''
               ];
@@ -516,14 +521,13 @@ const sendCampaign = async () => {
           });
 
           await Promise.all(promises);
-
-          alert(`✅ ¡Campaña enviada con éxito a ${selectedClients.length} usuarios!`);
+          alert(`✅ Campaña enviada. Los cupones funcionarán automáticamente para: ${couponConfig.selectedItem || 'Todo'}`);
           setMarketingModal(false);
           setSelectedClients([]);
           
       } catch (error) {
           console.error(error);
-          alert("Hubo un error al guardar los cupones.");
+          alert("Error guardando.");
       } finally {
           setIsProcessing(false);
       }

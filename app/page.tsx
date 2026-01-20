@@ -134,24 +134,25 @@ const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
 
 // --- COMPONENTE CARRITO CON CHECKOUT ---
 // --- COMPONENTE CARRITO ---
+// --- COMPONENTE CARRITO (CartDrawer) ACTUALIZADO A EUROS ---
 const CartDrawer: React.FC<{
   onClose: () => void;
   cart: Array<{ id?: number; name: string; price: number; img?: string | null }>;
   removeFromCart: (index: number) => void;
   total: number;
   onCheckout: (order: any) => Promise<void>; 
-  appliedCoupon?: any; // <--- SOLUCIÓN ERROR 1 y 3
+  appliedCoupon?: any; 
 }> = ({ onClose, cart, removeFromCart, total, onCheckout, appliedCoupon }) => {
   const [view, setView] = useState('cart'); 
   const [paymentMethod, setPaymentMethod] = useState('pago_movil');
   const [paymentRef, setPaymentRef] = useState('');
   const [clientInfo, setClientInfo] = useState({ name: '', phone: '' });
 
-  // LÓGICA DE DESCUENTO (CARRITO)
+  // 1. LÓGICA DE CÁLCULO DE DESCUENTO
   let discountAmount = 0;
   let finalTotal = total;
 
-  if (appliedCoupon && (appliedCoupon.Target === 'all' || appliedCoupon.Target === 'product')) {
+  if (appliedCoupon && (appliedCoupon.Target === 'all' || appliedCoupon.Target === 'product' || !appliedCoupon.Target)) {
       if (String(appliedCoupon.Valor).includes('%')) {
           const percent = parseInt(appliedCoupon.Valor.replace('%', ''));
           discountAmount = (total * percent) / 100;
@@ -166,6 +167,7 @@ const CartDrawer: React.FC<{
       <div onClick={onClose} className="fixed inset-0 z-[60] bg-[#191919]/20 backdrop-blur-[2px]"></div>
       <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed top-0 right-0 z-[70] h-screen w-full md:w-[450px] bg-[#E9E0D5]/95 backdrop-blur-xl shadow-2xl flex flex-col border-l border-white/50">
         
+        {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-[#96765A]/20">
           <h3 className={`${cinzel.className} text-xl flex items-center gap-2 text-[#191919]`}>
              {view === 'checkout' && <button onClick={() => setView('cart')} className="mr-2"><ArrowLeft size={18}/></button>}
@@ -174,6 +176,7 @@ const CartDrawer: React.FC<{
           <button onClick={onClose} className="hover:text-[#96765A] p-2 text-[#191919]"><X size={24} /></button>
         </div>
 
+        {/* VISTA DEL CARRITO */}
         {view === 'cart' && (
             <>
                 <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
@@ -189,7 +192,8 @@ const CartDrawer: React.FC<{
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h4 className="font-medium text-sm truncate text-[#191919]">{item.name}</h4>
-                                    <p className="text-xs text-[#96765A] font-bold mt-1">${Number(item.price).toFixed(2)}</p>
+                                    {/* PRECIO ITEM EN EUROS */}
+                                    <p className="text-xs text-[#96765A] font-bold mt-1">€{Number(item.price).toFixed(2)}</p>
                                 </div>
                                 <button onClick={() => removeFromCart(idx)} className="text-gray-400 hover:text-red-400 p-2"><Trash2 size={16} /></button>
                             </div>
@@ -197,21 +201,31 @@ const CartDrawer: React.FC<{
                     })
                     )}
                 </div>
+                
+                {/* FOOTER DEL CARRITO (TOTALES) */}
                 {cart.length > 0 && (
                     <div className="p-6 border-t border-[#96765A]/20 bg-[#E9E0D5]/50">
+                        
+                        {/* DESCUENTO EN EUROS */}
                         {appliedCoupon && discountAmount > 0 && (
-                            <div className="mb-2 flex justify-between text-xs text-green-600 font-bold">
-                                <span>Cupón: {appliedCoupon.Titulo}</span>
-                                <span>-${Number(discountAmount).toFixed(2)}</span>
+                            <div className="mb-2 flex justify-between text-xs text-green-600 font-bold bg-green-50 p-2 rounded-lg border border-green-100">
+                                <span className="flex items-center gap-1"><Ticket size={12}/> Cupón: {appliedCoupon.Titulo}</span>
+                                <span>-€{Number(discountAmount).toFixed(2)}</span>
                             </div>
                         )}
-                        <div className="flex justify-between mb-6 text-lg font-medium font-serif text-[#191919]"><span>Total</span><span>${Number(finalTotal).toFixed(2)}</span></div>
+
+                        <div className="flex justify-between mb-6 text-lg font-medium font-serif text-[#191919]">
+                            <span>Total</span>
+                            {/* TOTAL EN EUROS */}
+                            <span>€{Number(finalTotal).toFixed(2)}</span>
+                        </div>
                         <button onClick={() => setView('checkout')} className={`w-full py-4 text-xs uppercase tracking-[0.2em] ${GLASS_DARK_STYLE}`}>Ir a Pagar</button>
                     </div>
                 )}
             </>
         )}
 
+        {/* VISTA DE CHECKOUT (PAGO) */}
         {view === 'checkout' && (
             <div className="flex-1 overflow-y-auto p-6 flex flex-col">
                 <div className="space-y-4 mb-6">
@@ -249,7 +263,6 @@ const CartDrawer: React.FC<{
                 <button 
                     onClick={() => {
                         if(!clientInfo.name || !paymentRef) return alert("Completa todos los datos");
-                        // Pasamos el total YA DESCONTADO
                         onCheckout({ cart, total: finalTotal, clientInfo, paymentMethod, paymentRef });
                     }} 
                     className={`w-full py-4 text-xs uppercase tracking-[0.2em] mt-6 ${GLASS_DARK_STYLE}`}
@@ -265,6 +278,7 @@ const CartDrawer: React.FC<{
 };
 
 // --- COMPONENTE MODAL RESERVA (RESPONSIVE & FILTRADO) ---
+// --- BOOKING MODAL ACTUALIZADO ---
 interface BookingModalProps {
   onClose: () => void;
   step: number;
@@ -282,8 +296,8 @@ interface BookingModalProps {
   isSubmitting: boolean;
   saveToDatabase: (extraData: Record<string, unknown>) => void;
   specialistsList: Array<any>;
-  existingBookings: any[]; // <--- Agregado para evitar error de TS
-  appliedCoupon?: any;     // <--- Agregado para recibir el cupón
+  existingBookings: any[]; 
+  appliedCoupon?: any; // Recibe el cupón activo
 }
 
 const BookingModal: React.FC<BookingModalProps> = ({
@@ -294,8 +308,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
   selectedTime, setSelectedTime,
   clientData, setClientData,
   isSubmitting, saveToDatabase, specialistsList,
-  existingBookings, // <--- Recibir props
-  appliedCoupon     // <--- Recibir props
+  existingBookings, 
+  appliedCoupon // Recibimos el cupón
 }) => {
 
   const [paymentMethod, setPaymentMethod] = useState('pago_movil'); 
@@ -306,44 +320,56 @@ const BookingModal: React.FC<BookingModalProps> = ({
         if (!selectedService.specialists || String(selectedService.specialists).trim() === "") {
              return true;
         }
-        
         const serviceSpecs = String(selectedService.specialists).toLowerCase();
         const specName = String(spec.name).toLowerCase();
-
         return serviceSpecs.includes(specName);
       })
     : specialistsList; 
 
-  // --- LÓGICA DE CÁLCULO DE PRECIO CON CUPÓN ---
+  // --- CÁLCULO DE PRECIO CON CUPÓN ---
   const getFinalPrice = () => {
       let price = Number(selectedService?.price) || 0;
       
-      // Verificamos si hay cupón y si aplica (General o Específico al servicio actual)
-      if (appliedCoupon && (appliedCoupon.Target === 'all' || (appliedCoupon.Target === 'service' && (!appliedCoupon.selectedItem || appliedCoupon.selectedItem === selectedService?.name)))) {
-          
-          let discount = 0;
-          // Si es porcentaje (tiene %)
-          if (String(appliedCoupon.Valor).includes('%')) {
-              discount = (price * parseInt(appliedCoupon.Valor.replace('%', ''))) / 100;
-          } 
-          // Si es monto fijo
-          else {
-              discount = parseFloat(String(appliedCoupon.Valor).replace(/[^0-9.]/g, ''));
+      if (appliedCoupon) {
+          // Desglosamos lo que viene de la base de datos (Columna Target)
+          // Puede venir "all" o "service|Nutricion"
+          const targetString = String(appliedCoupon.Target || 'all');
+          const [scope, specificName] = targetString.split('|'); // Separamos por la barra |
+
+          // 1. Verificamos si el cupón es válido para este servicio
+          let isValid = false;
+
+          if (targetString === 'all' || targetString === 'Masivo' || targetString === 'Individual') {
+              isValid = true; // Aplica a todo
+          } else if (scope === 'service') {
+              // Verificamos si el nombre del servicio coincide (ignorando mayúsculas/espacios)
+              if (specificName && selectedService?.name && 
+                  specificName.toLowerCase().trim() === selectedService.name.toLowerCase().trim()) {
+                  isValid = true;
+              }
           }
-          return Math.max(0, price - discount);
+
+          // 2. Si es válido, aplicamos la matemática
+          if (isValid) {
+              let discount = 0;
+              if (String(appliedCoupon.Valor).includes('%')) {
+                  discount = (price * parseInt(appliedCoupon.Valor.replace('%', ''))) / 100;
+              } else {
+                  discount = parseFloat(String(appliedCoupon.Valor).replace(/[^0-9.]/g, ''));
+              }
+              return Math.max(0, price - discount);
+          }
       }
-      return price;
+      return price; // Si no aplica, devolvemos el precio normal
   };
 
   const finalPrice = getFinalPrice();
-  // ---------------------------------------------
 
   return (
   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-[#191919]/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div className="bg-[#E9E0D5]/95 backdrop-blur-xl w-full max-w-4xl max-h-[90vh] md:h-[600px] shadow-2xl overflow-hidden flex flex-col md:flex-row rounded-3xl relative border border-white/50">
       <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-[#191919] z-20"><X size={24} /></button>
       
-      {/* SIDEBAR PASOS (Oculto en móvil) */}
       <div className="w-full md:w-1/3 bg-white/40 p-6 md:p-8 flex-col justify-between border-b md:border-b-0 md:border-r border-[#96765A]/10 hidden md:flex">
         <div>
           <h3 className={`${cinzel.className} text-xl md:text-2xl mb-6 text-[#191919]`}>Tu Cita</h3>
@@ -413,7 +439,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   <p className="text-xs uppercase tracking-widest mb-3 text-[#191919]">Horas Disponibles</p>
                   <div className="grid grid-cols-3 gap-3">
                     {['09:00', '11:00', '14:30', '16:00', '17:30'].map(time => {
-                      // Verificación de disponibilidad usando existingBookings
                       const isBooked = existingBookings && existingBookings.some((booking: any) => 
                         booking.specialist === selectedSpecialist?.name &&
                         booking.date === selectedDate &&
@@ -460,7 +485,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           </motion.div>
         )}
 
-        {/* PASO 4: CONFIRMACIÓN Y PAGO (CON LOGICA DE DESCUENTO) */}
+        {/* PASO 4: CONFIRMACIÓN Y PAGO (ACTUALIZADO CON CUPÓN Y EUROS) */}
         {step === 4 && (
           <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-8">
             <button onClick={() => setStep(3)} className="text-xs text-gray-400 underline mb-2 self-start">Volver</button>
@@ -477,14 +502,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     <div className="flex justify-between text-gray-500 border-t border-[#96765A]/20 pt-2 mt-2 items-center">
                         <span>Total a Pagar:</span> 
                         <div className="text-right">
-                            {/* SI HAY DESCUENTO, TACHAMOS EL PRECIO ORIGINAL */}
+                            {/* MOSTRAR DESCUENTO SI EXISTE */}
                             {appliedCoupon && finalPrice < Number(selectedService.price) && (
-                                <span className="text-xs line-through text-gray-400 mr-2">${selectedService.price}</span>
+                                <span className="text-xs line-through text-gray-400 mr-2">€{selectedService.price}</span>
                             )}
-                            <span className="text-[#96765A] font-bold text-lg">${finalPrice}</span>
+                            <span className="text-[#96765A] font-bold text-lg">€{finalPrice}</span>
                         </div>
                     </div>
-                    {/* MENSAJE DE CUPÓN APLICADO */}
+                    {/* MENSAJE VERDE DE CUPÓN */}
                     {appliedCoupon && finalPrice < Number(selectedService.price) && (
                         <p className="text-[10px] text-green-600 mt-1 text-right font-bold flex justify-end items-center gap-1">
                             <Check size={10}/> Cupón aplicado: {appliedCoupon.Titulo}
@@ -492,7 +517,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     )}
                 </div>
 
-                {/* Selección de Pago */}
                 <h3 className="text-xs uppercase tracking-widest font-bold mb-3 text-gray-500">Método de Pago</h3>
                 <div className="grid grid-cols-3 gap-2 mb-6">
                     {['pago_movil', 'binance', 'efectivo'].map(m => (
@@ -506,7 +530,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     ))}
                 </div>
 
-                {/* Detalles del Pago */}
                 <div className="bg-white/60 border border-white/50 p-5 rounded-xl mb-6 shadow-sm text-[#191919]">
                     {paymentMethod === 'pago_movil' && (
                         <div className="text-sm space-y-2">
@@ -532,7 +555,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     )}
                 </div>
 
-                {/* Input Referencia (Solo si no es efectivo) */}
                 {paymentMethod !== 'efectivo' && (
                     <div className="mb-6">
                         <label className="text-xs uppercase tracking-widest text-gray-500 mb-2 block">Número de Referencia / Comprobante</label>
@@ -553,7 +575,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
                         alert("Por favor ingresa el número de referencia del pago.");
                         return;
                     }
-                    // Enviamos los datos extra a la función de guardado
                     saveToDatabase({ paymentMethod, paymentRef }); 
                 }} 
                 disabled={isSubmitting} 
@@ -891,7 +912,8 @@ const ClientAccessModal = ({ onClose, onLoginSuccess }: any) => {
 
 // --- COMPONENTE ZONA PRIVADA DE CLIENTES (ACTUALIZADO CON CUPONES REALES) ---
 // --- COMPONENTE ZONA PRIVADA DE CLIENTES (CON BOTÓN CERRAR SESIÓN) ---
-const ClientNewsModal = ({ user, coupons, onClose, onLogout }: any) => (
+const ClientNewsModal = ({ user, coupons, onClose, onLogout, onRedeem }: any) => (
+    // ... (resto del código igual) ...
     <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed inset-0 z-[60] bg-[#FAF9F6] flex flex-col">
         <header className="p-6 border-b border-[#E9E0D5] flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-10">
             <div>
@@ -928,10 +950,11 @@ const ClientNewsModal = ({ user, coupons, onClose, onLogout }: any) => (
                                 transition={{ delay: idx * 0.1 }}
                                 className="relative rounded-3xl p-6 overflow-hidden shadow-xl min-h-[200px] flex flex-col justify-center"
                                 style={{ 
-                                    backgroundColor: coupon.BgColor || '#191919', 
+                                    background: coupon.BgColor || '#191919', // <--- CAMBIO CLAVE: "background" (no backgroundColor)
                                     color: coupon.Color || '#E9E0D5' 
                                 }}
                             >
+                            
                                 {processGoogleImage(coupon.Imagen) && (
                                     <div className="absolute inset-0 z-0 opacity-30">
                                         <img src={processGoogleImage(coupon.Imagen)!} className="w-full h-full object-cover" alt="fondo" />
@@ -950,9 +973,12 @@ const ClientNewsModal = ({ user, coupons, onClose, onLogout }: any) => (
                                     <div className="text-4xl md:text-5xl font-bold my-3 opacity-100">{coupon.Valor}</div>
                                     <p className="text-sm font-light italic mb-4 opacity-90">"{coupon.Text}"</p>
                                     
-                                    <button className="bg-white text-black w-full py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-lg">
-                                        Canjear Ahora
-                                    </button>
+                                   <button 
+        onClick={() => onRedeem(coupon)} // <--- AQUÍ LA MAGIA
+        className="bg-white text-black w-full py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-lg"
+    >
+        Canjear Ahora
+    </button>
                                 </div>
                             </motion.div>
                         ))}
