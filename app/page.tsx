@@ -7,9 +7,7 @@ import { motion, AnimatePresence, Variants, useMotionValue, useTransform } from 
 import { 
   ArrowRight, Star, Clock, MapPin, 
   ShoppingBag, X, Check, Phone, Instagram, Mail,
-  Trash2, User, Calendar as CalIcon, ArrowLeft, 
-  Gift,   // <--- AGREGAR
-  Ticket, LogOut  // <--- AGREGAR
+  Trash2, User, Calendar as CalIcon, ArrowLeft 
 } from 'lucide-react';
 import { Cinzel, Montserrat } from 'next/font/google';
 
@@ -801,94 +799,39 @@ const ClientAccessModal = ({ onClose, onLoginSuccess }: any) => {
   );
 };
 
-// --- COMPONENTE ZONA PRIVADA DE CLIENTES (ACTUALIZADO CON CUPONES REALES) ---
-// --- COMPONENTE ZONA PRIVADA DE CLIENTES (CON BOTÓN CERRAR SESIÓN) ---
-const ClientNewsModal = ({ user, coupons, onClose, onLogout }: any) => (
+// --- COMPONENTE NOVEDADES (DASHBOARD CLIENTE) ---
+const ClientNewsModal = ({ user, onClose }: any) => (
     <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed inset-0 z-[60] bg-[#FAF9F6] flex flex-col">
         <header className="p-6 border-b border-[#E9E0D5] flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-10">
             <div>
                 <p className="text-xs text-[#6D6D6D] uppercase tracking-widest">Bienvenido de nuevo,</p>
                 <h2 className={`${cinzel.className} text-xl text-[#191919]`}>{user?.Nombre || 'Cliente'}</h2>
-                
-                {/* --- NUEVO BOTÓN DE CERRAR SESIÓN --- */}
-                <button 
-                    onClick={onLogout}
-                    className="flex items-center gap-1 text-[10px] text-red-400 mt-2 font-bold uppercase tracking-wider hover:text-red-600 transition-colors border border-red-100 px-2 py-1 rounded-md"
-                >
-                    <LogOut size={10} /> Cerrar Sesión
-                </button>
-                {/* ------------------------------------ */}
-
             </div>
-            <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200"><X size={20}/></button>
+            <button onClick={onClose} className="p-2 bg-gray-100 rounded-full"><X size={20}/></button>
         </header>
         
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
-            {/* SECCIÓN DE CUPONES Y REGALOS REALES */}
-            <div>
-                <h3 className="text-[#191919] font-bold uppercase tracking-widest text-xs mb-4 flex items-center gap-2">
-                    <Gift size={16} className="text-[#D4AF37]"/> Tus Regalos y Promociones
-                </h3>
-                
-                {coupons && coupons.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {coupons.map((coupon: any, idx: number) => (
-                            <motion.div 
-                                key={idx}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.1 }}
-                                className="relative rounded-3xl p-6 overflow-hidden shadow-xl min-h-[200px] flex flex-col justify-center"
-                                style={{ 
-                                    backgroundColor: coupon.BgColor || '#191919', 
-                                    color: coupon.Color || '#E9E0D5' 
-                                }}
-                            >
-                                {processGoogleImage(coupon.Imagen) && (
-                                    <div className="absolute inset-0 z-0 opacity-30">
-                                        <img src={processGoogleImage(coupon.Imagen)!} className="w-full h-full object-cover" alt="fondo" />
-                                    </div>
-                                )}
-                                
-                                <div className="relative z-10">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <span className="bg-white/20 backdrop-blur-sm text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider border border-white/10">
-                                            {coupon.Tipo === 'gift' ? 'Regalo' : coupon.Tipo === 'giftcard' ? 'Gift Card' : 'Descuento'}
-                                        </span>
-                                        <Ticket size={20} className="opacity-70"/>
-                                    </div>
-                                    
-                                    <h3 className={`${cinzel.className} text-2xl md:text-3xl font-bold mb-1 leading-tight`}>{coupon.Titulo}</h3>
-                                    <div className="text-4xl md:text-5xl font-bold my-3 opacity-100">{coupon.Valor}</div>
-                                    <p className="text-sm font-light italic mb-4 opacity-90">"{coupon.Text}"</p>
-                                    
-                                    <button className="bg-white text-black w-full py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-lg">
-                                        Canjear Ahora
-                                    </button>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200">
-                        <Gift size={32} className="mx-auto text-gray-300 mb-2"/>
-                        <p className="text-sm text-gray-400">No tienes promociones activas por el momento.</p>
-                    </div>
-                )}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Tarjeta de Novedad 1 */}
+            <div className="bg-[#191919] rounded-3xl p-6 text-[#E9E0D5] relative overflow-hidden">
+                <div className="relative z-10">
+                    <span className="bg-[#96765A] text-white text-[10px] px-2 py-1 rounded font-bold uppercase">Nuevo</span>
+                    <h3 className={`${cinzel.className} text-2xl mt-3 mb-2`}>Golden Hour Facial</h3>
+                    <p className="text-sm opacity-80 mb-6 max-w-[200px]">Descubre nuestro nuevo tratamiento con oro de 24k para una piel radiante.</p>
+                    <button className="bg-white text-black px-6 py-2 rounded-full text-xs font-bold uppercase">Ver Detalles</button>
+                </div>
+                <div className="absolute right-[-20px] top-0 w-32 h-full bg-gradient-to-l from-[#96765A]/50 to-transparent"></div>
             </div>
 
-            {/* Ofertas Generales */}
-            <div>
-                <h3 className="text-[#191919] font-bold uppercase tracking-widest text-xs mb-4">Ofertas Generales</h3>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white border border-[#E9E0D5] p-4 rounded-2xl">
-                        <div className="text-[#96765A] font-cinzel text-xl font-bold">20% OFF</div>
-                        <p className="text-xs text-[#6D6D6D] mt-1">En tu próxima visita de Lunes a Miércoles.</p>
-                    </div>
-                    <div className="bg-white border border-[#E9E0D5] p-4 rounded-2xl">
-                        <div className="text-[#96765A] font-cinzel text-xl font-bold">2x1</div>
-                        <p className="text-xs text-[#6D6D6D] mt-1">En limpieza facial básica si traes un amigo.</p>
-                    </div>
+            {/* Ofertas Exclusivas */}
+            <h3 className="text-[#191919] font-bold uppercase tracking-widest text-xs mt-8 mb-4">Tus Ofertas Exclusivas</h3>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white border border-[#E9E0D5] p-4 rounded-2xl">
+                    <div className="text-[#96765A] font-cinzel text-xl font-bold">20% OFF</div>
+                    <p className="text-xs text-[#6D6D6D] mt-1">En tu próxima visita de Lunes a Miércoles.</p>
+                </div>
+                <div className="bg-white border border-[#E9E0D5] p-4 rounded-2xl">
+                    <div className="text-[#96765A] font-cinzel text-xl font-bold">2x1</div>
+                    <p className="text-xs text-[#6D6D6D] mt-1">En limpieza facial básica si traes un amigo.</p>
                 </div>
             </div>
         </div>
@@ -907,7 +850,6 @@ export default function BronzerFullPlatform() {
   const [clientAuthOpen, setClientAuthOpen] = useState(false);
   const [clientNewsOpen, setClientNewsOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userCoupons, setUserCoupons] = useState<any[]>([]); // <--- AGREGAR ESTA LÍNEA
   
   // --- ESTADOS: INICIALIZAMOS CON LOS DATOS DE DEMO ---
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
@@ -963,30 +905,6 @@ export default function BronzerFullPlatform() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const handleLoginSuccess = async (user: any) => {
-      setCurrentUser(user);
-      setClientAuthOpen(false);
-      
-      try {
-          // 1. Pedimos los datos de la pestaña 'cupones'
-          const res = await fetch('/api/database?tab=cupones');
-          const data = await res.json();
-          
-          if(data.success) {
-              // 2. Filtramos: El email del cupón debe coincidir con el email del usuario logueado
-              // Usamos .trim() y .toLowerCase() para evitar errores por mayúsculas/espacios
-              const myCoupons = data.data.filter((c: any) => 
-                  c.Email?.toLowerCase().trim() === user.Email?.toLowerCase().trim()
-              );
-              setUserCoupons(myCoupons);
-          }
-      } catch (error) {
-          console.error("Error cargando cupones", error);
-      }
-
-      setClientNewsOpen(true); // Abrir el modal
-  };
 
   // --- FUNCIÓN CORREGIDA: GUARDAR CITAS EN PESTAÑA 'Citas' ---
   const saveToDatabase = async (extraData: Record<string, unknown>): Promise<void> => {
@@ -1306,19 +1224,17 @@ const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item
         {clientAuthOpen && (
             <ClientAccessModal 
                 onClose={() => setClientAuthOpen(false)} 
-                onLoginSuccess={handleLoginSuccess} 
+                onLoginSuccess={(user: any) => {
+                    setCurrentUser(user);
+                    setClientAuthOpen(false);
+                    setClientNewsOpen(true); // Abrir novedades al entrar
+                }} 
             />
         )}
         {clientNewsOpen && (
             <ClientNewsModal 
                 user={currentUser} 
-                coupons={userCoupons} 
                 onClose={() => setClientNewsOpen(false)} 
-                // AGREGADO: Lógica para cerrar sesión
-                onLogout={() => {
-                    setCurrentUser(null);
-                    setClientNewsOpen(false);
-                }}
             />
         )}
       </AnimatePresence>
