@@ -374,13 +374,22 @@ export default function AdminPanel() {
   };
 
   const saveService = async () => {
-      if (!serviceModal) return;
+      if (!serviceModal.name || !serviceModal.price) return alert("Completa los campos obligatorios");
       setIsProcessing(true);
+      
+      // --- CORRECCIÓN: ESTRUCTURA EXACTA DE 7 COLUMNAS (A-G) ---
+      // Eliminamos 'specialists' de aquí para evitar el error "writing to column [H]"
       const rowData = [
-          serviceModal.id, serviceModal.name, serviceModal.price, serviceModal.duration,
-          serviceModal.category, serviceModal.description || '', serviceModal.img || '',
-          serviceModal.specialists || ''
+          serviceModal.id,                  // A: ID
+          serviceModal.name,                // B: Nombre
+          serviceModal.price,               // C: Precio
+          serviceModal.duration,            // D: Duración
+          serviceModal.category,            // E: Categoría
+          serviceModal.description || '',   // F: Descripción
+          serviceModal.img || ''            // G: Imagen
       ];
+      // ---------------------------------------------------------
+
       try {
           const method = isCreating ? 'POST' : 'PUT';
           const body = isCreating 
@@ -406,10 +415,20 @@ export default function AdminPanel() {
   const saveSpecialistEdit = async () => {
     if (!editSpecialist) return;
     setIsProcessing(true);
+    
+    // CORRECCIÓN: Ajustado a 8 columnas exactas para coincidir con tu Excel (A-H)
+    // Se eliminó la 9na columna que causaba el error y se fusionaron los servicios en la columna F.
     const rowData = [
-        editSpecialist.id, editSpecialist.name, editSpecialist.role, editSpecialist.img,
-        editSpecialist.schedule, editSpecialist.specialty || '', editSpecialist.experience || '', editSpecialist.certified || '', editSpecialist.services || ''
+        editSpecialist.id, 
+        editSpecialist.name, 
+        editSpecialist.role, 
+        editSpecialist.img,
+        editSpecialist.schedule, 
+        editSpecialist.services || editSpecialist.specialty || '', // Col F: Aquí se guardan los tratamientos
+        editSpecialist.experience || '', 
+        editSpecialist.certified || ''
     ];
+
     try {
         const res = await fetch('/api/database', {
             method: 'PUT',
@@ -1201,15 +1220,46 @@ export default function AdminPanel() {
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editSpecialist.name} onChange={e => setEditSpecialist({...editSpecialist, name: e.target.value})} /></div>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Rol</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editSpecialist.role} onChange={e => setEditSpecialist({...editSpecialist, role: e.target.value})} /></div>
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Horario</label><input className="w-full p-3 bg-gray-50 rounded-xl outline-none" value={editSpecialist.schedule} onChange={e => setEditSpecialist({...editSpecialist, schedule: e.target.value})} /></div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tratamientos (Separar por comas)</label>
-                                    <textarea 
-                                        className="w-full p-3 bg-gray-50 rounded-xl outline-none h-20 text-xs" 
-                                        placeholder="Ej: Maderoterapia, Facial, Laser" 
-                                        value={editSpecialist.services || ''} 
-                                        onChange={e => setEditSpecialist({...editSpecialist, services: e.target.value})} 
-                                    />
+                                
+                                {/* --- NUEVO: SELECTOR DE SERVICIOS (CHECKBOXES) --- */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Asignar Tratamientos Autorizados</label>
+                                    <div className="h-40 overflow-y-auto p-3 bg-gray-50 rounded-xl border border-gray-100 grid grid-cols-1 gap-2">
+                                        {services.map((serv) => {
+                                            // Verificamos si el especialista ya tiene este servicio asignado
+                                            const currentServices = editSpecialist.services || '';
+                                            const isChecked = currentServices.includes(serv.name);
+
+                                            return (
+                                                <label key={serv.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        className="accent-[#D4AF37]"
+                                                        checked={isChecked}
+                                                        onChange={(e) => {
+                                                            let newServices = currentServices.split(',').map((s: string) => s.trim()).filter(Boolean);
+                                                            
+                                                            if (e.target.checked) {
+                                                                // Agregar servicio
+                                                                newServices.push(serv.name);
+                                                            } else {
+                                                                // Quitar servicio
+                                                                newServices = newServices.filter((s: string) => s !== serv.name);
+                                                            }
+                                                            // Guardar como string separado por comas
+                                                            setEditSpecialist({ ...editSpecialist, services: newServices.join(', ') });
+                                                        }}
+                                                    />
+                                                    <span className="text-xs text-gray-700">{serv.name}</span>
+                                                </label>
+                                            );
+                                        })}
+                                        {services.length === 0 && <p className="text-[10px] text-gray-400">No hay servicios creados aún.</p>}
+                                    </div>
+                                    <p className="text-[9px] text-gray-400">Selecciona los servicios que este especialista puede realizar.</p>
                                 </div>
+                                {/* ------------------------------------------------ */}
+
                                 <div className="space-y-1"><label className="text-[10px] font-bold text-gray-400 uppercase">Link Foto</label><input className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none" value={editSpecialist.img} onChange={e => setEditSpecialist({...editSpecialist, img: e.target.value})} /></div>
                                 <button onClick={saveSpecialistEdit} disabled={isProcessing} className="w-full bg-black text-white py-4 rounded-xl uppercase tracking-widest font-bold text-xs mt-4">Guardar Perfil</button>
                             </>
