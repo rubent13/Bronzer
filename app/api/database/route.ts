@@ -89,10 +89,9 @@ export async function GET(request: Request) {
         if (tab === 'Clientes Registrados') {
            return {
              ...baseObj,
-             Fecha: row[0],    // Columna A
-             Email: row[1],    // Columna B
-             Password: row[2], // Columna C
-             Nombre: row[3]    // Columna D
+             Email: row[0],    // Columna A
+             Password: row[1], // Columna B
+             Nombre: row[2]    // Columna C
            };
         }
 

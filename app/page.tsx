@@ -8,10 +8,27 @@ import {
   ArrowRight, Star, Clock, MapPin, 
   ShoppingBag, X, Check, Phone, Instagram, Mail,
   Trash2, User, Calendar as CalIcon, ArrowLeft, 
-  Gift,   // <--- AGREGAR
-  Ticket, LogOut  // <--- AGREGAR
+  Gift, Ticket, LogOut, 
+  ChevronLeft, ChevronRight // <--- AGREGADOS PARA EL CALENDARIO
 } from 'lucide-react';
 import { Cinzel, Montserrat } from 'next/font/google';
+
+// --- NUEVOS IMPORTS PARA EL CALENDARIO REAL ---
+import { 
+  format, 
+  addMonths, 
+  subMonths, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfWeek, 
+  endOfWeek, 
+  isSameMonth, 
+  isSameDay, 
+  addDays, 
+  isBefore, 
+  startOfDay 
+} from 'date-fns';
+import { es } from 'date-fns/locale'; // Para idioma Español
 
 // --- FUENTES ---
 const cinzel = Cinzel({ subsets: ['latin'], weight: ['400', '500', '600'] });
@@ -132,7 +149,6 @@ const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   );
 };
 
-// --- COMPONENTE CARRITO (CartDrawer) ACTUALIZADO A EUROS ---
 // --- COMPONENTE CARRITO (CartDrawer) CON LÓGICA DE PRODUCTOS ESPECÍFICOS ---
 const CartDrawer: React.FC<{
   onClose: () => void;
@@ -200,8 +216,8 @@ const CartDrawer: React.FC<{
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-[#96765A]/20">
           <h3 className={`${cinzel.className} text-xl flex items-center gap-2 text-[#191919]`}>
-             {view === 'checkout' && <button onClick={() => setView('cart')} className="mr-2"><ArrowLeft size={18}/></button>}
-             {view === 'cart' ? `Tu Bolsa (${cart.length})` : 'Finalizar Compra'}
+              {view === 'checkout' && <button onClick={() => setView('cart')} className="mr-2"><ArrowLeft size={18}/></button>}
+              {view === 'cart' ? `Tu Bolsa (${cart.length})` : 'Finalizar Compra'}
           </h3>
           <button onClick={onClose} className="hover:text-[#96765A] p-2 text-[#191919]"><X size={24} /></button>
         </div>
@@ -312,8 +328,7 @@ const CartDrawer: React.FC<{
   );
 };
 
-// --- COMPONENTE MODAL RESERVA (RESPONSIVE & FILTRADO) ---
-// --- BOOKING MODAL ACTUALIZADO ---
+// --- BOOKING MODAL CON CALENDARIO REAL ---
 interface BookingModalProps {
   onClose: () => void;
   step: number;
@@ -332,7 +347,7 @@ interface BookingModalProps {
   saveToDatabase: (extraData: Record<string, unknown>) => void;
   specialistsList: Array<any>;
   existingBookings: any[]; 
-  appliedCoupon?: any; // Recibe el cupón activo
+  appliedCoupon?: any; 
 }
 
 const BookingModal: React.FC<BookingModalProps> = ({
@@ -344,74 +359,112 @@ const BookingModal: React.FC<BookingModalProps> = ({
   clientData, setClientData,
   isSubmitting, saveToDatabase, specialistsList,
   existingBookings, 
-  appliedCoupon // Recibimos el cupón
+  appliedCoupon 
 }) => {
 
   const [paymentMethod, setPaymentMethod] = useState('pago_movil'); 
   const [paymentRef, setPaymentRef] = useState('');
+  
+  // ESTADO PARA EL CALENDARIO (Mes que se está viendo)
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const filteredSpecialists = selectedService
     ? specialistsList.filter((spec) => {
-        // --- 1. NUEVA LÓGICA: Verificar si el especialista tiene este servicio marcado (Admin) ---
         const specServices = (spec.services || spec.specialty || "").toLowerCase();
         const targetName = (selectedService.name || selectedService.title || "").toLowerCase().trim();
-        
-        // Si el especialista tiene el servicio en su lista, lo mostramos
-        if (specServices.includes(targetName)) {
-            return true;
-        }
-
-        // --- 2. LÓGICA ORIGINAL (MANTENIDA): Verificar configuración antigua del servicio ---
-        if (!selectedService.specialists || String(selectedService.specialists).trim() === "") {
-             return true;
-        }
+        if (specServices.includes(targetName)) return true;
+        if (!selectedService.specialists || String(selectedService.specialists).trim() === "") return true;
         const serviceSpecs = String(selectedService.specialists).toLowerCase();
         const specName = String(spec.name).toLowerCase();
         return serviceSpecs.includes(specName);
       })
     : specialistsList; 
 
-  // --- CÁLCULO DE PRECIO CON CUPÓN ---
   const getFinalPrice = () => {
       let price = Number(selectedService?.price) || 0;
-      
       if (appliedCoupon) {
           const targetString = String(appliedCoupon.Target || 'all');
           const [scope, specificName] = targetString.split('|'); 
-
-          // 1. Verificamos si el cupón es válido
           let isValid = false;
-
-          if (targetString === 'all' || targetString === 'Masivo' || targetString === 'Individual') {
-              isValid = true; 
-          } else if (scope === 'service') {
-              if (specificName && selectedService?.name && 
-                  specificName.toLowerCase().trim() === selectedService.name.toLowerCase().trim()) {
-                  isValid = true;
-              }
+          if (targetString === 'all' || targetString === 'Masivo' || targetString === 'Individual') isValid = true; 
+          else if (scope === 'service') {
+              if (specificName && selectedService?.name && specificName.toLowerCase().trim() === selectedService.name.toLowerCase().trim()) isValid = true;
           }
-
-          // 2. Aplicamos descuento
           if (isValid) {
               let discount = 0;
-              if (String(appliedCoupon.Valor).includes('%')) {
-                  discount = (price * parseInt(appliedCoupon.Valor.replace('%', ''))) / 100;
-              } else {
-                  discount = parseFloat(String(appliedCoupon.Valor).replace(/[^0-9.]/g, ''));
-              }
+              if (String(appliedCoupon.Valor).includes('%')) discount = (price * parseInt(appliedCoupon.Valor.replace('%', ''))) / 100;
+              else discount = parseFloat(String(appliedCoupon.Valor).replace(/[^0-9.]/g, ''));
               return Math.max(0, price - discount);
           }
       }
       return price; 
   };
-
   const finalPrice = getFinalPrice();
+
+  // --- FUNCIONES DEL CALENDARIO ---
+  const renderCalendar = () => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(monthStart);
+    const startDate = startOfWeek(monthStart, { weekStartsOn: 1 }); // Semana empieza Lunes
+    const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
+
+    const rows = [];
+    let days = [];
+    let day = startDate;
+    let formattedDate = "";
+
+    while (day <= endDate) {
+        for (let i = 0; i < 7; i++) {
+            formattedDate = format(day, "d");
+            const cloneDay = day;
+            const isoDate = format(cloneDay, "yyyy-MM-dd");
+            const isSelected = selectedDate === isoDate;
+            const isToday = isSameDay(day, new Date());
+            const isPast = isBefore(day, startOfDay(new Date()));
+            const isDifferentMonth = !isSameMonth(day, monthStart);
+
+            days.push(
+                <motion.div 
+                    key={day.toString()} 
+                    className={`relative w-full aspect-square flex items-center justify-center cursor-pointer rounded-full text-xs md:text-sm font-medium transition-colors
+                        ${isDifferentMonth ? "text-gray-300" : "text-[#191919]"}
+                        ${isPast ? "opacity-30 pointer-events-none" : "hover:bg-white/60"}
+                        ${isSelected ? "text-[#E9E0D5] font-bold shadow-md" : ""}
+                    `}
+                    onClick={() => !isPast && setSelectedDate(isoDate)}
+                    whileTap={{ scale: 0.9 }}
+                >
+                    {/* Fondo animado para selección */}
+                    {isSelected && (
+                        <motion.div 
+                            layoutId="selectedDay"
+                            className="absolute inset-0 bg-[#191919] rounded-full z-0"
+                            initial={{ scale: 0.5 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                        />
+                    )}
+                    {/* Indicador de hoy */}
+                    {!isSelected && isToday && (
+                        <div className="absolute bottom-1 w-1 h-1 bg-[#96765A] rounded-full"></div>
+                    )}
+                    <span className="relative z-10">{formattedDate}</span>
+                </motion.div>
+            );
+            day = addDays(day, 1);
+        }
+        rows.push(<div className="grid grid-cols-7 gap-1 md:gap-2 mb-1 md:mb-2" key={day.toString()}>{days}</div>);
+        days = [];
+    }
+    return <div className="mt-4">{rows}</div>;
+  };
 
   return (
   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-[#191919]/60 backdrop-blur-sm flex items-center justify-center p-4">
     <div className="bg-[#E9E0D5]/95 backdrop-blur-xl w-full max-w-4xl max-h-[90vh] md:h-[600px] shadow-2xl overflow-hidden flex flex-col md:flex-row rounded-3xl relative border border-white/50">
       <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-[#191919] z-20"><X size={24} /></button>
       
+      {/* SIDEBAR PASOS */}
       <div className="w-full md:w-1/3 bg-white/40 p-6 md:p-8 flex-col justify-between border-b md:border-b-0 md:border-r border-[#96765A]/10 hidden md:flex">
         <div>
           <h3 className={`${cinzel.className} text-xl md:text-2xl mb-6 text-[#191919]`}>Tu Cita</h3>
@@ -437,66 +490,81 @@ const BookingModal: React.FC<BookingModalProps> = ({
             <h2 className={`${cinzel.className} text-xl md:text-2xl mb-2 text-[#191919]`}>Selecciona tu Experto</h2>
             <p className="text-gray-500 text-sm mb-6">Elige al profesional para tu tratamiento.</p>
             <div className="grid grid-cols-1 gap-3 md:gap-4">
-              
-              {filteredSpecialists.length > 0 ? (
-                  filteredSpecialists.map((spec) => {
-                    const imgUrl = processGoogleImage(spec.img);
-                    return (
-                    <div key={spec.id} onClick={() => { setSelectedSpecialist(spec); setStep(2); }} className="flex items-center gap-4 p-3 border border-white/50 rounded-2xl hover:border-[#96765A]/50 hover:bg-white/60 hover:shadow-md cursor-pointer transition-all group bg-white/30">
-                      <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden relative grayscale group-hover:grayscale-0 transition-all border-2 border-white shadow-sm shrink-0">
-                        {imgUrl ? <img src={imgUrl} alt={spec.name} className="w-full h-full object-cover" /> : null}
-                      </div>
-                      <div>
-                          <h4 className="font-medium text-sm md:text-base text-[#191919]">{spec.name}</h4>
-                          <p className="text-[10px] md:text-xs text-[#96765A] uppercase">{spec.role}</p>
-                          {spec.schedule && <p className="text-[10px] text-gray-500 mt-0.5">{spec.schedule}</p>}
-                      </div>
-                      <ArrowRight className="ml-auto text-gray-300 group-hover:text-[#96765A]" size={18} />
-                    </div>
-                  )})
-              ) : (
-                  <div className="text-center py-10 text-gray-400 text-sm border border-dashed border-gray-300 rounded-2xl">
-                      No hay especialistas disponibles para este tratamiento.
-                  </div>
-              )}
-              
+              {filteredSpecialists.length > 0 ? (filteredSpecialists.map((spec) => { const imgUrl = processGoogleImage(spec.img); return (<div key={spec.id} onClick={() => { setSelectedSpecialist(spec); setStep(2); }} className="flex items-center gap-4 p-3 border border-white/50 rounded-2xl hover:border-[#96765A]/50 hover:bg-white/60 hover:shadow-md cursor-pointer transition-all group bg-white/30"><div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden relative grayscale group-hover:grayscale-0 transition-all border-2 border-white shadow-sm shrink-0">{imgUrl ? <img src={imgUrl} alt={spec.name} className="w-full h-full object-cover" /> : null}</div><div><h4 className="font-medium text-sm md:text-base text-[#191919]">{spec.name}</h4><p className="text-[10px] md:text-xs text-[#96765A] uppercase">{spec.role}</p>{spec.schedule && <p className="text-[10px] text-gray-500 mt-0.5">{spec.schedule}</p>}</div><ArrowRight className="ml-auto text-gray-300 group-hover:text-[#96765A]" size={18} /></div>)})) : (<div className="text-center py-10 text-gray-400 text-sm border border-dashed border-gray-300 rounded-2xl">No hay especialistas disponibles para este tratamiento.</div>)}
             </div>
           </motion.div>
         )}
 
+        {/* PASO 2: CALENDARIO REAL (NUEVO DISEÑO) */}
         {step === 2 && (
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <button onClick={() => setStep(1)} className="text-xs text-gray-400 underline mb-4">Volver</button>
-            <h2 className={`${cinzel.className} text-xl md:text-2xl mb-6 text-[#191919]`}>Disponibilidad</h2>
-            <div className="flex gap-2 overflow-x-auto pb-4 mb-6 no-scrollbar">
-              {getNextDays().map((day, i) => (
-                <button key={i} onClick={() => setSelectedDate(day.isoDate)} className={`min-w-[70px] h-20 rounded-2xl border flex flex-col items-center justify-center transition-all shadow-sm ${selectedDate === day.isoDate ? 'bg-[#191919] text-[#E9E0D5] border-[#191919] shadow-md scale-105' : 'border-white/50 bg-white/40 text-gray-500 hover:border-[#96765A]'}`}>
-                  <span className="text-xs uppercase">{day.dayName}</span><span className="text-xl font-serif">{day.date}</span>
-                </button>
-              ))}
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="h-full flex flex-col">
+            <button onClick={() => setStep(1)} className="text-xs text-gray-400 underline mb-2 self-start">Volver</button>
+            <h2 className={`${cinzel.className} text-xl md:text-2xl mb-4 text-[#191919]`}>Disponibilidad</h2>
+            
+            <div className="flex flex-col md:flex-row gap-8 h-full overflow-hidden">
+                {/* CALENDARIO */}
+                <div className="w-full md:w-1/2 flex flex-col">
+                    {/* Header Calendario */}
+                    <div className="flex justify-between items-center mb-4 px-2">
+                        <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1 hover:bg-white/50 rounded-full transition-colors"><ChevronLeft size={20} className="text-[#191919]"/></button>
+                        <span className="font-serif text-lg text-[#191919] capitalize">
+                            {format(currentMonth, 'MMMM yyyy', { locale: es })}
+                        </span>
+                        <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1 hover:bg-white/50 rounded-full transition-colors"><ChevronRight size={20} className="text-[#191919]"/></button>
+                    </div>
+                    {/* Días Semana (CORREGIDO key={i}) */}
+                    <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2 text-center">
+                        {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, i) => (
+                            <span key={i} className="text-[10px] font-bold text-[#96765A]">{day}</span>
+                        ))}
+                    </div>
+                    {/* Grilla Días */}
+                    <div className="flex-1">
+                        {renderCalendar()}
+                    </div>
+                </div>
+
+                {/* HORAS DISPONIBLES (A LA DERECHA O ABAJO) */}
+                <div className="w-full md:w-1/2 flex flex-col border-t md:border-t-0 md:border-l border-[#96765A]/20 pt-4 md:pt-0 md:pl-6">
+                    <p className="text-xs uppercase tracking-widest mb-4 text-[#191919]">
+                        {selectedDate 
+                            ? `Horarios para el ${format(new Date(selectedDate), "d 'de' MMMM", {locale: es})}` 
+                            : 'Selecciona una fecha'}
+                    </p>
+                    
+                    {selectedDate ? (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-2 gap-3 overflow-y-auto pr-2 custom-scrollbar">
+                            {['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'].map(time => {
+                                const isBooked = existingBookings && existingBookings.some((booking: any) => 
+                                    booking.specialist === selectedSpecialist?.name &&
+                                    booking.date === selectedDate &&
+                                    booking.time === time
+                                );
+                                return (
+                                <button 
+                                    key={time} 
+                                    onClick={() => { if (!isBooked) { setSelectedTime(time); setStep(3); } }} 
+                                    disabled={isBooked}
+                                    className={`py-3 text-sm rounded-xl transition-all border ${
+                                        selectedTime === time 
+                                        ? 'bg-[#191919] text-[#E9E0D5] border-[#191919] shadow-lg scale-105' 
+                                        : isBooked 
+                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-transparent' 
+                                            : 'bg-white/40 border-white/60 hover:border-[#96765A] hover:bg-white text-[#191919]'
+                                    }`}
+                                >
+                                    {time}
+                                </button>
+                                )
+                            })}
+                        </motion.div>
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-gray-400 text-xs italic">
+                            &larr; Elige un día en el calendario
+                        </div>
+                    )}
+                </div>
             </div>
-            <AnimatePresence>
-              {selectedDate && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                  <p className="text-xs uppercase tracking-widest mb-3 text-[#191919]">Horas Disponibles</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    {['09:00', '11:00', '14:30', '16:00', '17:30'].map(time => {
-                        const isBooked = existingBookings.some((booking: any) => 
-                            booking.specialist === selectedSpecialist?.name &&
-                            booking.date === selectedDate &&
-                            booking.time === time
-                        );
-                        return (
-                          <button key={time} onClick={() => { if (!isBooked) { setSelectedTime(time); setStep(3); } }} disabled={isBooked} className={`py-2 text-sm transition-all ${isBooked ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' : GLASS_STYLE.replace('py-3', '').replace('px-8','').replace('tracking-widest','') + ' hover:bg-white/20'}`}>
-                              {time}
-                              {isBooked && <span className="block text-[8px] mt-1">OCUPADO</span>}
-                          </button>
-                        )
-                    })}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
         )}
 
@@ -514,113 +582,44 @@ const BookingModal: React.FC<BookingModalProps> = ({
           </motion.div>
         )}
 
-        {/* PASO 4: CONFIRMACIÓN Y PAGO (CON LOGICA DE DESCUENTO Y EUROS) */}
         {step === 4 && (
           <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-8">
             <button onClick={() => setStep(3)} className="text-xs text-gray-400 underline mb-2 self-start">Volver</button>
             <h2 className={`${cinzel.className} text-xl md:text-2xl mb-4 text-[#191919]`}>Finalizar Reserva</h2>
-            
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                
-                {/* --- RESUMEN DE COMPRA --- */}
                 <div className="bg-white/40 p-4 rounded-xl border border-white/50 mb-6 text-sm">
                     <p className="font-bold text-base mb-2 text-[#191919]">{selectedService?.name || selectedService?.title}</p>
                     <div className="flex justify-between text-gray-500 mb-1"><span>Especialista:</span> <span className="text-[#191919]">{selectedSpecialist.name}</span></div>
                     <div className="flex justify-between text-gray-500 mb-1"><span>Fecha:</span> <span className="text-[#191919]">{selectedDate} - {selectedTime}</span></div>
-                    
                     <div className="flex justify-between text-gray-500 border-t border-[#96765A]/20 pt-2 mt-2 items-center">
                         <span>Total a Pagar:</span> 
                         <div className="text-right">
-                            {/* MOSTRAR PRECIO TACHADO SI HAY DESCUENTO */}
-                            {appliedCoupon && finalPrice < Number(selectedService.price) && (
-                                <span className="text-xs line-through text-gray-400 mr-2">€{selectedService.price}</span>
-                            )}
+                            {appliedCoupon && finalPrice < Number(selectedService.price) && (<span className="text-xs line-through text-gray-400 mr-2">€{selectedService.price}</span>)}
                             <span className="text-[#96765A] font-bold text-lg">€{finalPrice}</span>
                         </div>
                     </div>
-                    {/* MENSAJE VERDE DE CUPÓN */}
-                    {appliedCoupon && finalPrice < Number(selectedService.price) && (
-                        <p className="text-[10px] text-green-600 mt-1 text-right font-bold flex justify-end items-center gap-1">
-                            <Check size={10}/> Cupón aplicado: {appliedCoupon.Titulo}
-                        </p>
-                    )}
+                    {appliedCoupon && finalPrice < Number(selectedService.price) && (<p className="text-[10px] text-green-600 mt-1 text-right font-bold flex justify-end items-center gap-1"><Check size={10}/> Cupón aplicado: {appliedCoupon.Titulo}</p>)}
                 </div>
-
                 <h3 className="text-xs uppercase tracking-widest font-bold mb-3 text-gray-500">Método de Pago</h3>
                 <div className="grid grid-cols-3 gap-2 mb-6">
                     {['pago_movil', 'binance', 'efectivo'].map(m => (
-                        <button 
-                            key={m} 
-                            onClick={() => setPaymentMethod(m)} 
-                            className={`py-3 text-[10px] md:text-xs uppercase tracking-wider border rounded-xl transition-all ${paymentMethod === m ? 'bg-[#191919] text-[#96765A] border-[#191919]' : 'bg-white/60 border-gray-200 text-gray-400 hover:border-gray-400'}`}
-                        >
-                            {m.replace('_', ' ')}
-                        </button>
+                        <button key={m} onClick={() => setPaymentMethod(m)} className={`py-3 text-[10px] md:text-xs uppercase tracking-wider border rounded-xl transition-all ${paymentMethod === m ? 'bg-[#191919] text-[#96765A] border-[#191919]' : 'bg-white/60 border-gray-200 text-gray-400 hover:border-gray-400'}`}>{m.replace('_', ' ')}</button>
                     ))}
                 </div>
-
                 <div className="bg-white/60 border border-white/50 p-5 rounded-xl mb-6 shadow-sm text-[#191919]">
-                    {paymentMethod === 'pago_movil' && (
-                        <div className="text-sm space-y-2">
-                            <p className="font-bold text-gray-800">Datos Pago Móvil / Zelle:</p>
-                            <p className="text-gray-500">Banco: <span className="text-[#191919]">Banesco</span></p>
-                            <p className="text-gray-500">Tel: <span className="text-[#191919]">0412-123-4567</span></p>
-                            <p className="text-gray-500">CI/RIF: <span className="text-[#191919]">V-12345678</span></p>
-                            <p className="text-gray-500 mt-2 text-xs border-t pt-2">Zelle: <span className="text-[#191919] font-medium">pagos@bronzer.com</span></p>
-                        </div>
-                    )}
-                    {paymentMethod === 'binance' && (
-                        <div className="text-sm space-y-2">
-                            <p className="font-bold text-gray-800">Binance Pay:</p>
-                            <p className="text-gray-500">Pay ID: <span className="text-[#191919] font-mono bg-white px-2 py-1 rounded">123456789</span></p>
-                            <p className="text-gray-500">Email: <span className="text-[#191919]">binance@bronzer.com</span></p>
-                            <p className="text-[10px] text-[#96765A] mt-2">Recuerda seleccionar USDT</p>
-                        </div>
-                    )}
-                    {paymentMethod === 'efectivo' && (
-                        <div className="text-sm text-center py-4 text-gray-500">
-                            <p>Realizarás el pago directamente en nuestro mostrador el día de tu cita.</p>
-                        </div>
-                    )}
+                    {paymentMethod === 'pago_movil' && (<div className="text-sm space-y-2"><p className="font-bold text-gray-800">Datos Pago Móvil / Zelle:</p><p className="text-gray-500">Banco: <span className="text-[#191919]">Banesco</span></p><p className="text-gray-500">Tel: <span className="text-[#191919]">0412-123-4567</span></p><p className="text-gray-500">CI/RIF: <span className="text-[#191919]">V-12345678</span></p><p className="text-gray-500 mt-2 text-xs border-t pt-2">Zelle: <span className="text-[#191919] font-medium">pagos@bronzer.com</span></p></div>)}
+                    {paymentMethod === 'binance' && (<div className="text-sm space-y-2"><p className="font-bold text-gray-800">Binance Pay:</p><p className="text-gray-500">Pay ID: <span className="text-[#191919] font-mono bg-white px-2 py-1 rounded">123456789</span></p><p className="text-gray-500">Email: <span className="text-[#191919]">binance@bronzer.com</span></p><p className="text-[10px] text-[#96765A] mt-2">Recuerda seleccionar USDT</p></div>)}
+                    {paymentMethod === 'efectivo' && (<div className="text-sm text-center py-4 text-gray-500"><p>Realizarás el pago directamente en nuestro mostrador el día de tu cita.</p></div>)}
                 </div>
-
-                {paymentMethod !== 'efectivo' && (
-                    <div className="mb-6">
-                        <label className="text-xs uppercase tracking-widest text-gray-500 mb-2 block">Número de Referencia / Comprobante</label>
-                        <input 
-                            type="text" 
-                            value={paymentRef} 
-                            onChange={(e) => setPaymentRef(e.target.value)} 
-                            className="w-full p-4 bg-white/60 border border-white/50 rounded-xl focus:border-[#96765A] outline-none text-[#191919]" 
-                            placeholder="Ej: 123456..." 
-                        />
-                    </div>
-                )}
+                {paymentMethod !== 'efectivo' && (<div className="mb-6"><label className="text-xs uppercase tracking-widest text-gray-500 mb-2 block">Número de Referencia / Comprobante</label><input type="text" value={paymentRef} onChange={(e) => setPaymentRef(e.target.value)} className="w-full p-4 bg-white/60 border border-white/50 rounded-xl focus:border-[#96765A] outline-none text-[#191919]" placeholder="Ej: 123456..." /></div>)}
             </div>
-
-            <button 
-                onClick={() => {
-                    if(paymentMethod !== 'efectivo' && !paymentRef) {
-                        alert("Por favor ingresa el número de referencia del pago.");
-                        return;
-                    }
-                    saveToDatabase({ paymentMethod, paymentRef }); 
-                }} 
-                disabled={isSubmitting} 
-                className={`w-full py-4 text-xs tracking-widest uppercase ${GLASS_DARK_STYLE} disabled:opacity-50`}
-            >
-                {isSubmitting ? 'Procesando...' : 'Confirmar Reserva'}
-            </button>
+            <button onClick={() => { if(paymentMethod !== 'efectivo' && !paymentRef) { alert("Por favor ingresa el número de referencia del pago."); return; } saveToDatabase({ paymentMethod, paymentRef }); }} disabled={isSubmitting} className={`w-full py-4 text-xs tracking-widest uppercase ${GLASS_DARK_STYLE} disabled:opacity-50`}>{isSubmitting ? 'Procesando...' : 'Confirmar Reserva'}</button>
           </div>
         )}
 
         {step === 5 && (
           <div className="relative flex flex-col items-center justify-center h-full text-center animate-in fade-in zoom-in overflow-hidden">
-            <div className="absolute inset-0 pointer-events-none">
-              {[...Array(40)].map((_, i) => (
-                <motion.div key={i} initial={{ y: -50, x: Math.random() * 400 - 200, opacity: 1, rotate: 0 }} animate={{ y: 500, rotate: 360, opacity: 0 }} transition={{ duration: 2 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2, ease: "linear" }} className="absolute top-0 left-1/2 w-2 h-2" style={{ backgroundColor: ['#96765A', '#E9E0D5', '#191919'][Math.floor(Math.random() * 3)], borderRadius: Math.random() > 0.5 ? '50%' : '0%' }} />
-              ))}
-            </div>
+            <div className="absolute inset-0 pointer-events-none">{[...Array(40)].map((_, i) => (<motion.div key={i} initial={{ y: -50, x: Math.random() * 400 - 200, opacity: 1, rotate: 0 }} animate={{ y: 500, rotate: 360, opacity: 0 }} transition={{ duration: 2 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2, ease: "linear" }} className="absolute top-0 left-1/2 w-2 h-2" style={{ backgroundColor: ['#96765A', '#E9E0D5', '#191919'][Math.floor(Math.random() * 3)], borderRadius: Math.random() > 0.5 ? '50%' : '0%' }} />))}</div>
             <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-green-600 mb-6 shadow-lg border border-green-100 z-10"><Check size={32} /></div>
             <h4 className={`${cinzel.className} text-xl md:text-2xl mb-2 z-10 text-[#191919]`}>¡Reserva Exitosa!</h4>
             <p className="text-gray-500 mb-6 max-w-xs text-sm z-10">Tu cita ha sido guardada. Recibirás confirmación por correo.</p>
@@ -780,8 +779,8 @@ const Boutique3DCarousel = ({ products, addToCart, onViewAll }: { products: any[
               whileHover={{ scale: 1.05 }}
             >
                <motion.div 
-                  style={{ rotateX, rotateY, x, y }}
-                  className="relative w-full max-w-md aspect-square"
+                 style={{ rotateX, rotateY, x, y }}
+                 className="relative w-full max-w-md aspect-square"
                >
                   <div className="absolute inset-0 bg-[#96765A]/20 rounded-full blur-3xl scale-75 transform translate-y-10 -z-10"></div>
                   {imgUrl && (
@@ -852,7 +851,7 @@ const ClientAccessModal = ({ onClose, onLoginSuccess }: any) => {
 
         const payload = {
             tab: "Clientes Registrados", 
-            data: [formData.email, formData.password, formData.nombre] 
+            data: [Date.now().toString(), formData.nombre, formData.email, formData.password] 
         };
 
         const res = await fetch('/api/database', { 
@@ -939,17 +938,15 @@ const ClientAccessModal = ({ onClose, onLoginSuccess }: any) => {
   );
 };
 
-// --- COMPONENTE ZONA PRIVADA DE CLIENTES (ACTUALIZADO CON CUPONES REALES) ---
 // --- COMPONENTE ZONA PRIVADA DE CLIENTES (CON BOTÓN CERRAR SESIÓN) ---
 const ClientNewsModal = ({ user, coupons, onClose, onLogout, onRedeem }: any) => (
-    // ... (resto del código igual) ...
     <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed inset-0 z-[60] bg-[#FAF9F6] flex flex-col">
         <header className="p-6 border-b border-[#E9E0D5] flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-10">
             <div>
                 <p className="text-xs text-[#6D6D6D] uppercase tracking-widest">Bienvenido de nuevo,</p>
                 <h2 className={`${cinzel.className} text-xl text-[#191919]`}>{user?.Nombre || 'Cliente'}</h2>
                 
-                {/* --- NUEVO BOTÓN DE CERRAR SESIÓN --- */}
+                {/* --- BOTÓN DE CERRAR SESIÓN --- */}
                 <button 
                     onClick={onLogout}
                     className="flex items-center gap-1 text-[10px] text-red-400 mt-2 font-bold uppercase tracking-wider hover:text-red-600 transition-colors border border-red-100 px-2 py-1 rounded-md"
@@ -979,7 +976,7 @@ const ClientNewsModal = ({ user, coupons, onClose, onLogout, onRedeem }: any) =>
                                 transition={{ delay: idx * 0.1 }}
                                 className="relative rounded-3xl p-6 overflow-hidden shadow-xl min-h-[200px] flex flex-col justify-center"
                                 style={{ 
-                                    background: coupon.BgColor || '#191919', // <--- CAMBIO CLAVE: "background" (no backgroundColor)
+                                    background: coupon.BgColor || '#191919', 
                                     color: coupon.Color || '#E9E0D5' 
                                 }}
                             >
@@ -1003,11 +1000,11 @@ const ClientNewsModal = ({ user, coupons, onClose, onLogout, onRedeem }: any) =>
                                     <p className="text-sm font-light italic mb-4 opacity-90">"{coupon.Text}"</p>
                                     
                                    <button 
-        onClick={() => onRedeem(coupon)} // <--- AQUÍ LA MAGIA
-        className="bg-white text-black w-full py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-lg"
-    >
-        Canjear Ahora
-    </button>
+                                        onClick={() => onRedeem(coupon)} 
+                                        className="bg-white text-black w-full py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-lg"
+                                    >
+                                        Canjear Ahora
+                                    </button>
                                 </div>
                             </motion.div>
                         ))}
@@ -1037,10 +1034,6 @@ const ClientNewsModal = ({ user, coupons, onClose, onLogout, onRedeem }: any) =>
         </div>
     </motion.div>
 );
-
-// Duplicate ClientAccessModal removed (kept single declaration above)
-
-// Duplicate ClientNewsModal removed (kept single declaration above)
 
 export default function BronzerFullPlatform() {
   const [showSplash, setShowSplash] = useState(true);
@@ -1384,12 +1377,17 @@ export default function BronzerFullPlatform() {
          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] z-0 pointer-events-none"></div>
       </section>
 
-      <section id="servicios" className="py-16 md:py-24 bg-[#E9E0D5]/50 relative">
-        <div className="container mx-auto px-6 md:px-12 relative z-10">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4 relative z-10">
-            <h2 className={`${cinzel.className} text-2xl md:text-4xl drop-shadow-sm text-[#191919]`}>Menú de Tratamientos</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+      {/* SECCIÓN DE TRATAMIENTOS (ACTUALIZADA) */}
+      <section id="servicios" className="py-16 md:py-24 px-4 bg-[#E9E0D5]/30">
+        <div className="max-w-7xl mx-auto">
+          
+          {/* 1. TÍTULO CENTRADO */}
+          <h2 className={`${cinzel.className} text-2xl md:text-4xl text-center mb-12 text-[#191919]`}>
+            MENÚ DE TRATAMIENTOS
+          </h2>
+
+          {/* 2. GRID CON 1 COLUMNA EN MÓVIL */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {services.map((item: Service) => {
               const imgUrl = processGoogleImage(item.img || item.Imagen || item.imagen || item.Image);
               return (
@@ -1404,6 +1402,7 @@ export default function BronzerFullPlatform() {
               </motion.div>
             )})}
           </div>
+
           <div className="flex md:hidden justify-center mt-8">
             <button className={`flex items-center gap-2 px-8 py-3 text-xs uppercase tracking-widest ${GLASS_STYLE}`}>Ver Todo <ArrowRight size={14} /></button>
           </div>

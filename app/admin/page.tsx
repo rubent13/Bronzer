@@ -187,6 +187,7 @@ export default function AdminPanel() {
     setIsLoadingGoogle(true);
     try {
       // 1. Cargar Citas
+     // 1. Cargar Citas
       const resCal = await fetch('/api/calendar'); 
       const dataCal = await resCal.json();
       if (dataCal.success) {
@@ -196,10 +197,20 @@ export default function AdminPanel() {
              const match = evt.description?.match(regex);
              return match ? match[1] : '';
           };
-          const dateObj = new Date(evt.start);
+          
+          // --- CORRECCIÓN 1: EXTRAER FECHA SEGURA ---
+          // Buscamos dateTime o date. Si no existen, usamos la fecha actual para no romper la app.
+          const startString = evt.start?.dateTime || evt.start?.date || new Date().toISOString();
+          const dateObj = new Date(startString);
+          // ------------------------------------------
+
+          // --- CORRECCIÓN 2: TÍTULO SEGURO ---
+          const rawTitle = evt.title || 'Cita Sin Título';
+          const cleanClientName = rawTitle.replace('CITA: ', '').split('(')[0];
+
           return {
             id: evt.id,
-            client: getVal('Cliente') || evt.title.replace('CITA: ', '').split('(')[0],
+            client: getVal('Cliente') || cleanClientName,
             phone: getVal('Teléfono') || '---',
             note: getVal('Nota') || '',
             service: getVal('Servicio') || 'Servicio General',
@@ -767,8 +778,9 @@ export default function AdminPanel() {
                         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Próximas Citas</h3>
                         <span className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-500">{reservations.length}</span>
                     </div>
-                    {reservations.map((res) => (
-                        <div key={res.id} className="bg-white p-5 rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 group">
+                    {reservations.map((res, index) => (
+                        // Usamos una combinación de ID + index para garantizar unicidad
+                        <div key={`${res.id}-${index}`} className="bg-white p-5 rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 group">
                             <div className="flex-1">
                                 <div className="flex justify-between md:justify-start items-center gap-4 mb-2">
                                     <h4 className="font-bold text-base text-[#0a0a0a]">{res.client}</h4>
